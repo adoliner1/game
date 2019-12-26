@@ -1,0 +1,32 @@
+doctype html
+html
+  head
+    title Lobby
+    link(rel='stylesheet', href='/stylesheets/lobby.css')
+  div(name='enterScreenNameDIV')
+    form(name='setNickName' action='')
+      input(id='a' autocomplete='off')
+      button Set Nickname
+  div(name='makeNewGameDIV')
+    form(id='makeGameButton')
+      button Make Game
+  scripts
+    script(src='/socket.io/socket.io.js')
+    script(src='https://code.jquery.com/jquery-1.11.1.js')
+    script(src='/javascripts/lobby.js')
+  body
+  div(id='gameListTableDIV')
+    table(id='gameListTable')
+      tr
+        th Host
+        th Red Player
+        th Blue Player
+  div(id='messagesBox')
+    ul(id='messages')
+  p('name=userIsTypingBox')
+  form(name='sendChat' action='')
+    input(id='m' autocomplete='off')
+    button Send
+  section(id='onlineUsersSection')
+    h2(id='onlineUsersHeader') Online Users
+    ul(id='onlineUsersList')

@@ -1,0 +1,22 @@
+doctype html
+html
+  head
+    title Chat
+    link(rel='stylesheet', href='/stylesheets/chatstyle.css')
+  div(name='enterScreenNameDIV')
+    form(name='setNickName' action='')
+      input(id='a' autocomplete='off')
+      button Set Nickname
+  scripts
+    script(src='/socket.io/socket.io.js')
+    script(src='https://code.jquery.com/jquery-1.11.1.js')
+    script(src='/javascripts/chat.js')
+  body
+    ul(id='messages')
+    p('name=userIsTypingBox')
+    form(name='sendChat' action='')
+      input(id='m' autocomplete='off')
+      button Send
+    section(id='onlineUsersSection')
+      h2(id='onlineUsersHeader') Online Users
+      ul(id='onlineUsersList')

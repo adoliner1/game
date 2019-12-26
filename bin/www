@@ -1,0 +1,245 @@
+#!/usr/bin/env node
+
+/**
+ * Module dependencies.
+ */
+
+var app = require('../app');
+var debug = require('debug')('pugpractice:server');
+var http = require('http');
+var pieces = require('../public/javascripts/pieces')
+
+/**
+ * Get port from environment and store in Express.
+ */
+
+var port = normalizePort(process.env.PORT || '3000');
+app.set('port', port);
+
+/**
+ * Create HTTP server.
+ */
+
+var server = http.createServer(app);
+var io = require('socket.io')(server);
+
+var userNickNames = {};
+var typingUsers = [];
+var lobbyGameList = {}
+var gameList = {}
+
+io.on('connection', function(socket)
+{
+  io.emit('chat message', "A new user connected");
+  io.emit('online users update', userNickNames)
+
+  for (host in lobbyGameList)
+  {
+    if (lobbyGameList.hasOwnProperty(host))
+    {
+      game = lobbyGameList[host]
+      io.to(socket.id).emit('game made', game)
+    }
+  }
+
+  socket.on('user joined game', function(host)
+  {
+    name = userNickNames[socket.id]
+    if (name == undefined) 
+    {
+      io.to(socket.id).emit('chat message', 'Set nickname to join a game');
+    }
+
+    else if (name == host) 
+    {
+      io.to(socket.id).emit('chat message', 'Can\'t join your own game');
+    }
+
+    else
+    {
+      lobbyGameList[host].bluePlayer = name
+      socket.join(host)
+
+      var newGame = 
+      {
+        redPlayer: {gold: 0, blackResource: 0, whiteResource: 0, score: 0, inventory: []},
+        bluePlayer: { gold: 0, blackResource: 0, whiteResource: 0, score: 0, inventory: []},
+        shop: {},
+        board: [],
+        playerTurn: "Red",
+        pieces: pieces.piecesList
+      }
+      io.to(host).emit('trigger redirect for new game', host)
+    }
+  })
+
+  socket.on('new socket connected to game', function(){
+      var newGame = 
+      {
+        redPlayer: {gold: 0, blackResource: 0, whiteResource: 0, score: 0, inventory: []},
+        bluePlayer: { gold: 0, blackResource: 0, whiteResource: 0, score: 0, inventory: []},
+        shop: {},
+        board: [],
+        playerTurn: "Red",
+        pieces: pieces.piecesList
+      }
+      
+  })
+
+  socket.on('make game', function()
+  {
+    name = userNickNames[socket.id]
+    if (name == undefined)
+    {
+      io.to(socket.id).emit('chat message', 'Set nickname to make a game');
+    }
+    else if (name in lobbyGameList)
+    {
+      io.to(socket.id).emit('chat message', 'You already have a game');
+    }
+    else
+    {
+      var game = {Host: name, redPlayer: name, bluePlayer: null}
+      lobbyGameList[name] = game
+      socket.join(game.Host)
+      io.emit("game made", game)
+    }
+  })
+
+  socket.on('chat message', function(msg){
+    if (userNickNames[socket.id]) {
+      io.emit('chat message', userNickNames[socket.id] + ": " + msg);
+    }
+    else {
+      io.to(socket.id).emit('set nickname to start chatting');
+    }
+  });
+
+  socket.on('private message', function(data){
+    recipient = data.recip
+    message = data.msg
+    socketID = userNickNames.getKeyByValue(recipient)
+    if(socketID){
+      appendedMessage = "Private message to you from " + userNickNames[socket.id] + ": " + message
+      io.to(socketID).emit('chat message', appendedMessage);
+    }
+    else{
+      io.to(socket.id).emit('chat message', 'No such user');
+    }
+  });
+
+  socket.on('disconnect', function(){
+    if(userNickNames[socket.id]){
+      if(typingUsers.includes(userNickNames[socket.id])){
+        index = typingUsers.indexOf(name);
+        typingUsers.splice(index, 1);
+        io.emit('user stopped typing', typingUsers)
+      }
+      delete userNickNames[socket.id]
+    }
+    io.emit('chat message', "A user disconnected");
+    io.emit('online users update', userNickNames)
+  });
+
+  socket.on('new nickname', function(newNickName){
+    userNickNames[socket.id] = newNickName;
+    io.emit('online users update', userNickNames)
+  });
+
+  socket.on('user is typing', function(){
+    name = userNickNames[socket.id];
+    if(name){
+      if(!typingUsers.includes(name)){
+        typingUsers.push(name)
+        io.emit('user is typing', typingUsers)
+      }
+    }
+  });
+
+  socket.on('user stopped typing', function(){
+    name = userNickNames[socket.id];
+    if(typingUsers.includes(name)){
+        index = typingUsers.indexOf(name);
+        typingUsers.splice(index, 1);
+        io.emit('user stopped typing', typingUsers)
+      }
+  });
+});
+
+/**
+ * Listen on provided port, on all network interfaces.
+ */
+
+server.listen(port);
+server.on('error', onError);
+server.on('listening', onListening);
+
+/**
+ * Normalize a port into a number, string, or false.
+ */
+
+Object.prototype.getKeyByValue = function( value ) {
+    for(var prop in this){
+      if(this.hasOwnProperty(prop)){
+          if(this[prop] === value)
+            return prop;
+        }
+    }
+    return false
+}
+
+function normalizePort(val) {
+  var port = parseInt(val, 10);
+
+  if (isNaN(port)) {
+    // named pipe
+    return val;
+  }
+
+  if (port >= 0) {
+    // port number
+    return port;
+  }
+
+  return false;
+}
+
+/**
+ * Event listener for HTTP server "error" event.
+ */
+
+function onError(error) {
+  if (error.syscall !== 'listen') {
+    throw error;
+  }
+
+  var bind = typeof port === 'string'
+    ? 'Pipe ' + port
+    : 'Port ' + port;
+
+  // handle specific listen errors with friendly messages
+  switch (error.code) {
+    case 'EACCES':
+      console.error(bind + ' requires elevated privileges');
+      process.exit(1);
+      break;
+    case 'EADDRINUSE':
+      console.error(bind + ' is already in use');
+      process.exit(1);
+      break;
+    default:
+      throw error;
+  }
+}
+
+/**
+ * Event listener for HTTP server "listening" event.
+ */
+
+function onListening() {
+  var addr = server.address();
+  var bind = typeof addr === 'string'
+    ? 'pipe ' + addr
+    : 'port ' + addr.port;
+  debug('Listening on ' + bind);
+}
