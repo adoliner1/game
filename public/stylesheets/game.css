@@ -2,27 +2,29 @@
 body {font: 13px Helvetica, Arial; height: 100%;}
 html {height: 100%;}
 
-#navigationBarSection {border: 2px dotted #000000; height:100%; width: 10%; float: left}
-#boardAndInventoriesSection {border: 2px dotted #000000; height: 100%; width: 50%; float: left}
-#displayerAndShopSection {border: 2px dotted #000000; height: 100%; width: 40%; float: left}
+#boardAndInventoriesSection {border: 2px dotted #000000; height: 100%; width: 60%; float: left}
+#displayerAndShopAndLogSection {border: 2px dotted #000000; height: 100%; width: 40%; float: left}
 
-#board {position: relative; top: 200px; left: 15%;}
-#board td {border: 2px solid #606060; padding: 16px; height: 40px; width: 40px;}
+#board {position: relative; top: 150px; left: 15%;}
+#board td {border: 1px solid #606060; padding: 16px; height: 50px; width: 50px;}
 
-#playerInventory { position: relative; left: 200px; top: 200px;}
+#playerInventory { position: relative; left: 278px; top: 150px;}
 #playerInventory td {border: 1px solid #009900; padding: 16px; height: 40px; width: 40px;;}
 
-#enemyInventory { position: relative; left: 200px; top: -330px;}
+#enemyInventory { position: relative; left: 278px; top: -450px;}
 #enemyInventory td {border: 1px solid #cc0000; padding: 16px; height: 40px; width: 40px;}
 
-#displayer {border: 2px solid #000000; height: 135px; width: 300px; position: relative; left: 0px; top: -200px;}
-#tileDisplayer {position: absolute; top: 100px;}
+#displayer {border: 2px solid #000000; height: 135px; width: 300px; position: relative; left: 0px; top: 0px;}
+#pieceDisplayer {{position: relative; top: 0px;}}
+#tileDisplayer {position: relative;}
 #buyButton {position: absolute; top: 230px; right: 400px;}
 
-#log {border: 2px solid #000000; height: 135px; width: 300px; position: absolute; top: 500px;}
+#log {border: 2px solid #000000; height: 135px; width: 300px; position: relative; top: 350px;}
 
-#store {padding: 16px; position: relative; top: 250px;}
-#store td {border: 3px solid #000666; padding: 16px; height: 40px; width: 40px;}
+#stores {padding: 16px; position: relative; top: 250px;}
+#buildings td {border: 1px solid #6b6b47; padding: 16px; height: 40px; width: 40px;}
+#units td {border: 1px solid #000080; padding: 16px; height: 40px; width: 40px;}
+#spells td {border: 1px solid #8f246b; padding: 16px; height: 40px; width: 40px;}
 
 
 td:hover {background-color: #FFFFE0}

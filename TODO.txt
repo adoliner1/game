@@ -1,0 +1,5 @@
+board dimensions?
+
+add buying stuff
+
+add building from inventory

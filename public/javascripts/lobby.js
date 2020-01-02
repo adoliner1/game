@@ -22,7 +22,14 @@ $(function () {
 
   $('form[name="setNickName"]').submit(function(e){
     e.preventDefault(); // prevents page reloading
-    socket.emit('new nickname', $('#a').val());
+    nickName = $('#a').val()
+    if (nickName == "")
+    {
+      return false
+    }
+    createCookie("nickName", nickName, 1)
+    socket.emit('new nickname', nickName);
+    $('#currentName')[0].innerHTML = "Current name: " + nickName;
     $('#a').val('');
     return false;
   });
@@ -46,13 +53,13 @@ $(function () {
   $('#makeGameButton').submit(function(e)
   {
       e.preventDefault();
-      socket.emit('make game');
+      socket.emit('make game in lobby');
   });
 
   socket.on('game made', function(game){
     table = $('#gameListTable')[0];
     var newButton = $('<td><button>Join Game</button></td>').click(function(){
-      socket.emit('user joined game', game.Host)
+      socket.emit('user trying to join game in lobby', game.Host)
      });
     newRow = table.insertRow(-1)
     var hostNameCell = newRow.insertCell()
@@ -101,5 +108,34 @@ function renderOnlineUsersList(dictionary){
   }
 }
 
+function createCookie(name, value, days) {
+    var expires;
+
+    if (days) {
+        var date = new Date();
+        date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+        expires = "; expires=" + date.toGMTString();
+    } else {
+        expires = "";
+    }
+    document.cookie = encodeURIComponent(name) + "=" + encodeURIComponent(value) + expires + "; path=/";
+}
+
+function readCookie(name) {
+    var nameEQ = encodeURIComponent(name) + "=";
+    var ca = document.cookie.split(';');
+    for (var i = 0; i < ca.length; i++) {
+        var c = ca[i];
+        while (c.charAt(0) === ' ')
+            c = c.substring(1, c.length);
+        if (c.indexOf(nameEQ) === 0)
+            return decodeURIComponent(c.substring(nameEQ.length, c.length));
+    }
+    return null;
+}
+
+function eraseCookie(name) {
+    createCookie(name, "", -1);
+}
 
 

@@ -1,27 +1,56 @@
-var piecesList = []
+var units = []
+var buildings = []
 
+function Unit(name, owner, boardAvatar, Types, cost, attack, defense, movement, health) {
+  this.Name = name;
+  this.owner = owner;
+  this.boardAvatar = boardAvatar;
+  this.Types = Types;
+  this.cost = cost;
+  this.attack = attack
+  this.defense = defense
+  this.movement = movement
+  this.health = health
+}
 
-var footman = {name: "Footman", owner: "", boardAvatar: "FM", Types: "Unit", cost: 3, attack: 1, defense: 1, movement: 1, health: 1}
+function Building(name, owner, boardAvatar, Types, cost, health, pointValue, coinProduction, blackProduction, whiteProduction) {
+  this.Name = name;
+  this.owner = owner;
+  this.boardAvatar = boardAvatar;
+  this.Types = Types;
+  this.cost = cost;
+  this.health = health
+  this.pointValue = pointValue
+  this.coinProduction = coinProduction
+  this.blackProduction = blackProduction
+  this.whiteProduction = whiteProduction
+}
 
-var copperMine = {name: "Copper Mine", owner: "", boardAvatar: "CM", Types: "Building", cost: 3, health: 1, coinProduction: 1, blackProduction: 0, whiteProduction: 0}
-var silverMine = {name: "Silver Mine", owner: "", boardAvatar: "SM", Types: "Building", cost: 4, health: 1, coinProduction: 2, blackProduction: 0, whiteProduction: 0}
-var goldMine = {name: "Gold Mine", owner: "", boardAvatar: "GM", Types: "Building", cost: 7, health: 1, coinProduction: 3, blackProduction: 0, whiteProduction: 0}
+//units
+var footman = new Unit("Footman", "", "FM", "Unit", 3, 1, 1, 1, 1)
 
-var whiteSmith = {name: "White Smith", owner: "", boardAvatar: "WS", Types: "Building", cost: 7, health: 1, coinProduction: 0, blackProduction: 0, whiteProduction: 1}
-var blackSmith = {name: "Black Smith", owner: "", boardAvatar: "BS", Types: "Building", cost: 7, health: 1, coinProduction: 0, blackProduction: 1, whiteProduction: 0}
+//buildings
+//resources
+var copperMine = new Building("Copper Mine", "", "CM", "Building", 3, 1, 0, 1, 0, 0)
+var silverMine = new Building("Silver Mine", "", "SM", "Building", 4, 1, 0, 3, 0, 0)
+var goldMine = new Building("Gold Mine", "", "GM", "Building", 7, 1, 0, 5, 0, 0)
+var whiteSmith = new Building("White Smith", "", "WS", "Building", 4, 1, 0, 0, 0, 1)
+var blackSmith = new Building("Black Smith", "", "BS", "Building", 4, 1, 0, 0, 1, 0)
 
-var estate = {name: "Estate", owner: "", boardAvatar: "ES", Types: "Building", pointValue: 1, cost: 3, health: 1, coinProduction: 0, blackProduction: 0, whiteProduction: 0}
-var duchy = {name: "Duchy", owner: "", boardAvatar: "DU", Types: "Building", pointValue: 3, cost: 4, health: 1, coinProduction: 0, blackProduction: 0, whiteProduction: 0}
-var province = {name: "Province", owner: "", boardAvatar: "PR", Types: "Building", pointValue: 6, cost: 7, health: 1, coinProduction: 0, blackProduction: 0, whiteProduction: 0}
+//victories
+var estate = new Building("Estate", "", "ES", "Building", 1, 1, 1, 0, 0, 0)
+var duchy = new Building("Duchy", "", "DU", "Building", 3, 1, 2, 0, 0, 0)
+var province = new Building("Province", "", "PR", "Building", 6, 1, 4, 0, 0, 0)
 
-piecesList.push(footman)
-piecesList.push(copperMine)
-piecesList.push(silverMine)
-piecesList.push(goldMine)
-piecesList.push(whiteSmith)
-piecesList.push(blackSmith)
-piecesList.push(estate)
-piecesList.push(duchy)
-piecesList.push(province)
+units.push(footman)
+buildings.push(copperMine)
+buildings.push(silverMine)
+buildings.push(goldMine)
+buildings.push(whiteSmith)
+buildings.push(blackSmith)
+buildings.push(estate)
+buildings.push(duchy)
+buildings.push(province)
 
-module.exports = piecesList
+module.exports.buildings = buildings
+module.exports.units = units

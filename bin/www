@@ -7,7 +7,7 @@
 var app = require('../app');
 var debug = require('debug')('pugpractice:server');
 var http = require('http');
-var pieces = require('../public/javascripts/pieces')
+var pieces = require('../public/javascripts/pieces.js')
 
 /**
  * Get port from environment and store in Express.
@@ -23,6 +23,7 @@ app.set('port', port);
 var server = http.createServer(app);
 var io = require('socket.io')(server);
 
+//globals
 var userNickNames = {};
 var typingUsers = [];
 var lobbyGameList = {}
@@ -42,8 +43,18 @@ io.on('connection', function(socket)
     }
   }
 
-  socket.on('user joined game', function(host)
-  {
+  socket.on('new socket connected to game', function(name){
+    for (host in gameList)
+    {
+      if (gameList.hasOwnProperty(host) && (gameList[host].redPlayer.Name == name || host == name))  
+      {
+        io.to(socket.id).emit('new game data', gameList[host], pieces.buildings, pieces.units)
+      }
+    }
+  })
+
+  //lobby functions
+  socket.on('user trying to join game in lobby', function(host){
     name = userNickNames[socket.id]
     if (name == undefined) 
     {
@@ -57,37 +68,33 @@ io.on('connection', function(socket)
 
     else
     {
-      lobbyGameList[host].bluePlayer = name
-      socket.join(host)
+      var board = new Array(10);
+      for (var i = 0; i < board.length; i++) 
+      {
+        board[i] = new Array(10);
+        for (var j=0; j < board[i].length; j++) 
+        {
+          var tile = {piece: null, statuses: "Empty"}
+          board[i][j] = tile
+        }
+      }
 
       var newGame = 
       {
-        redPlayer: {gold: 0, blackResource: 0, whiteResource: 0, score: 0, inventory: []},
-        bluePlayer: { gold: 0, blackResource: 0, whiteResource: 0, score: 0, inventory: []},
-        shop: {},
-        board: [],
-        playerTurn: "Red",
-        pieces: pieces.piecesList
+        redPlayer: {Name: name, gold: 0, blackResource: 0, whiteResource: 0, score: 0, inventory: []},
+        bluePlayer: {Name: host, gold: 0, blackResource: 0, whiteResource: 0, score: 0, inventory: []},
+        board: board,
+        buildings: pieces.buildings,
+        units: pieces.units,
+        playerTurn: "Red"
       }
+      gameList[host] = newGame
+      socket.join(host)
       io.to(host).emit('trigger redirect for new game', host)
     }
   })
 
-  socket.on('new socket connected to game', function(){
-      var newGame = 
-      {
-        redPlayer: {gold: 0, blackResource: 0, whiteResource: 0, score: 0, inventory: []},
-        bluePlayer: { gold: 0, blackResource: 0, whiteResource: 0, score: 0, inventory: []},
-        shop: {},
-        board: [],
-        playerTurn: "Red",
-        pieces: pieces.piecesList
-      }
-      
-  })
-
-  socket.on('make game', function()
-  {
+  socket.on('make game in lobby', function(){
     name = userNickNames[socket.id]
     if (name == undefined)
     {
@@ -106,6 +113,7 @@ io.on('connection', function(socket)
     }
   })
 
+  //chat funcitons
   socket.on('chat message', function(msg){
     if (userNickNames[socket.id]) {
       io.emit('chat message', userNickNames[socket.id] + ": " + msg);
@@ -113,7 +121,7 @@ io.on('connection', function(socket)
     else {
       io.to(socket.id).emit('set nickname to start chatting');
     }
-  });
+  })
 
   socket.on('private message', function(data){
     recipient = data.recip
@@ -126,7 +134,7 @@ io.on('connection', function(socket)
     else{
       io.to(socket.id).emit('chat message', 'No such user');
     }
-  });
+  })
 
   socket.on('disconnect', function(){
     if(userNickNames[socket.id]){
@@ -139,12 +147,12 @@ io.on('connection', function(socket)
     }
     io.emit('chat message', "A user disconnected");
     io.emit('online users update', userNickNames)
-  });
+  })
 
   socket.on('new nickname', function(newNickName){
     userNickNames[socket.id] = newNickName;
     io.emit('online users update', userNickNames)
-  });
+  })
 
   socket.on('user is typing', function(){
     name = userNickNames[socket.id];
@@ -154,7 +162,7 @@ io.on('connection', function(socket)
         io.emit('user is typing', typingUsers)
       }
     }
-  });
+  })
 
   socket.on('user stopped typing', function(){
     name = userNickNames[socket.id];
@@ -163,8 +171,8 @@ io.on('connection', function(socket)
         typingUsers.splice(index, 1);
         io.emit('user stopped typing', typingUsers)
       }
-  });
-});
+  })
+})
 
 /**
  * Listen on provided port, on all network interfaces.
@@ -242,4 +250,17 @@ function onListening() {
     ? 'pipe ' + addr
     : 'port ' + addr.port;
   debug('Listening on ' + bind);
+}
+
+function readCookie(name) {
+    var nameEQ = encodeURIComponent(name) + "=";
+    var ca = document.cookie.split(';');
+    for (var i = 0; i < ca.length; i++) {
+        var c = ca[i];
+        while (c.charAt(0) === ' ')
+            c = c.substring(1, c.length);
+        if (c.indexOf(nameEQ) === 0)
+            return decodeURIComponent(c.substring(nameEQ.length, c.length));
+    }
+    return null;
 }

@@ -8,10 +8,6 @@ html
       script(src='https://code.jquery.com/jquery-1.11.1.js')
       script(src='/javascripts/game.js')
   body
-    section(id='navigationBarSection')
-      ul(id='navBar')
-        li a
-        li b
     section(id='boardAndInventoriesSection')
       table(id='board')
         tr(id='row0')
@@ -138,54 +134,7 @@ html
           td
           td
           td
-    section(id='displayerAndShopSection')
-      form(id='buyButton' action='')
-        button Buy
-      table(id='store')
-        tr
-          td
-          td
-          td
-          td
-          td
-          td
-          td
-          td
-          td
-          td
-        tr
-          td
-          td
-          td
-          td
-          td
-          td
-          td
-          td
-          td
-          td
-        tr
-          td
-          td
-          td
-          td
-          td
-          td
-          td
-          td
-          td
-          td
-        tr
-          td
-          td
-          td
-          td
-          td
-          td
-          td
-          td
-          td
-          td
+    section(id='displayerAndShopAndLogSection')
       div(id='displayer')
         div(id='pieceDisplayer')
           p(id='displayerPieceName')
@@ -196,6 +145,15 @@ html
         div(id='tileDisplayer')
           p(id='displayerTilePlatform')
           p(id='displayerTileStatuses')
-        ul(id='log')
+      form(id='buyButton' action='')
+        button Buy
+      div(id='stores')
+        table(id='buildings')
+          tr
+        table(id='units')
+          tr
+        table(id='spells')
+          tr
+      ul(id='log')
 
   
