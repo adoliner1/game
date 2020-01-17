@@ -8,23 +8,26 @@ html {height: 100%;}
 #board {position: relative; top: 150px; left: 15%;}
 #board td {border: 1px solid #606060; padding: 16px; height: 50px; width: 50px;}
 
-#playerInventory { position: relative; left: 278px; top: 150px;}
-#playerInventory td {border: 1px solid #009900; padding: 16px; height: 40px; width: 40px;;}
+#blueInventory { position: relative; left: 278px; top: 150px;}
+#blueInventory td {border: 1px solid #0000b3; padding: 16px; height: 40px; width: 40px;;}
 
-#enemyInventory { position: relative; left: 278px; top: -450px;}
-#enemyInventory td {border: 1px solid #cc0000; padding: 16px; height: 40px; width: 40px;}
+#redInventory { position: relative; left: 278px; top: -450px;}
+#redInventory td {border: 1px solid #cc0000; padding: 16px; height: 40px; width: 40px;}
 
 #displayer {border: 2px solid #000000; height: 135px; width: 300px; position: relative; left: 0px; top: 0px;}
 #pieceDisplayer {{position: relative; top: 0px;}}
 #tileDisplayer {position: relative;}
-#buyButton {position: absolute; top: 230px; right: 400px;}
 
-#log {border: 2px solid #000000; height: 135px; width: 300px; position: relative; top: 350px;}
+#buyButton {position: absolute; top: 230px; right: 400px;}
+#buildButton {position: absolute; top: 230px; right: 400px;}
+
+#log {list-style-type: none; border: 2px solid #000000; height: 135px; width: 300px; position: relative; top: 350px; overflow: scroll;}
+
+#log li { padding: 5px 10px; width: 100%;}
 
 #stores {padding: 16px; position: relative; top: 250px;}
 #buildings td {border: 1px solid #6b6b47; padding: 16px; height: 40px; width: 40px;}
 #units td {border: 1px solid #000080; padding: 16px; height: 40px; width: 40px;}
 #spells td {border: 1px solid #8f246b; padding: 16px; height: 40px; width: 40px;}
 
-
-td:hover {background-color: #FFFFE0}
+td:hover {background-color: #FFFFE0;}

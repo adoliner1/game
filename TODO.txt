@@ -1,5 +1,17 @@
-board dimensions?
-
-add buying stuff
+board dimensions - platform placement
 
 add building from inventory
+
+add energy capacity
+
+
+
+CLEAN UP REFACTOR
+
+
+0, 0            9, 0
+
+
+
+
+0, 9            9, 9

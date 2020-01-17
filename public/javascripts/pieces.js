@@ -1,53 +1,49 @@
 var units = []
 var buildings = []
 
-function Unit(name, owner, boardAvatar, Types, cost, attack, defense, movement, health) {
+function Unit(name, owner, boardAvatar, Types, buildableZones, cost, power, movement, health) {
   this.Name = name;
   this.owner = owner;
   this.boardAvatar = boardAvatar;
   this.Types = Types;
+  this.buildableZones = buildableZones
   this.cost = cost;
-  this.attack = attack
-  this.defense = defense
+  this.power = power
   this.movement = movement
   this.health = health
 }
 
-function Building(name, owner, boardAvatar, Types, cost, health, pointValue, coinProduction, blackProduction, whiteProduction) {
+function Building(name, owner, boardAvatar, Types, buildableZones, cost, health, pointValue, coinProduction, isFlat) {
   this.Name = name;
   this.owner = owner;
   this.boardAvatar = boardAvatar;
   this.Types = Types;
+  this.buildableZones = buildableZones
   this.cost = cost;
   this.health = health
   this.pointValue = pointValue
   this.coinProduction = coinProduction
-  this.blackProduction = blackProduction
-  this.whiteProduction = whiteProduction
 }
 
 //units
-var footman = new Unit("Footman", "", "FM", "Unit", 3, 1, 1, 1, 1)
+var footman = new Unit("Footman", "", "FM", ["Unit"], ["Friendly"], 3, 1, 1, 1)
+var builder = new Unit("Footman", "", "BU", ["Unit", "Builder"], ["Friendly"], 3, 0, 1, 1)
 
 //buildings
 //resources
-var copperMine = new Building("Copper Mine", "", "CM", "Building", 3, 1, 0, 1, 0, 0)
-var silverMine = new Building("Silver Mine", "", "SM", "Building", 4, 1, 0, 3, 0, 0)
-var goldMine = new Building("Gold Mine", "", "GM", "Building", 7, 1, 0, 5, 0, 0)
-var whiteSmith = new Building("White Smith", "", "WS", "Building", 4, 1, 0, 0, 0, 1)
-var blackSmith = new Building("Black Smith", "", "BS", "Building", 4, 1, 0, 0, 1, 0)
+var copperMine = new Building("Copper Mine", "", "CM", ["Building"], ["Friendly"], 3, 1, 0, 1, false)
+var silverMine = new Building("Silver Mine", "", "SM", ["Building"], ["Friendly"], 4, 1, 0, 3, false)
+var goldMine = new Building("Gold Mine", "", "GM", ["Building"], ["Friendly"], 7, 1, 0, 5, false)
 
 //victories
-var estate = new Building("Estate", "", "ES", "Building", 1, 1, 1, 0, 0, 0)
-var duchy = new Building("Duchy", "", "DU", "Building", 3, 1, 2, 0, 0, 0)
-var province = new Building("Province", "", "PR", "Building", 6, 1, 4, 0, 0, 0)
+var estate = new Building("Estate", "", "ES", ["Building"], ["Friendly"], 1, 1, 1, 0, false)
+var duchy = new Building("Duchy", "", "DU", ["Building"], ["Friendly"], 3, 1, 2, 0, false)
+var province = new Building("Province", "", "PR", ["Building"], ["Friendly"], 6, 1, 4, 0, false)
 
 units.push(footman)
 buildings.push(copperMine)
 buildings.push(silverMine)
 buildings.push(goldMine)
-buildings.push(whiteSmith)
-buildings.push(blackSmith)
 buildings.push(estate)
 buildings.push(duchy)
 buildings.push(province)

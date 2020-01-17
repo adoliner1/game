@@ -43,11 +43,59 @@ io.on('connection', function(socket)
     }
   }
 
+  socket.on('player built a piece', function(tile, inventoryPosition){
+    //find player and their game
+    for (host in gameList)
+    {
+      if (gameList.hasOwnProperty(host) && gameList[host].redPlayer.socketID == socket.id)
+      {
+        game = gameList[host]
+        piece = game.redPlayer.inventory[inventoryPosition]
+        game.redPlayer.inventory[inventoryPosition] = null
+        game.board[tile.col][tile.row].pieces.push(piece)
+
+        io.to(game.bluePlayer.socketID).emit('opponent built a piece', tile, inventoryPosition)
+
+      }
+      else if (gameList.hasOwnProperty(host) && gameList[host].bluePlayer.socketID == socket.id)
+      {
+        game = gameList[host]
+        piece = game.bluePlayer.inventory[inventoryPosition]
+        game.bluePlayer.inventory[inventoryPosition] = null
+        game.board[tile.col][tile.row].pieces.push(piece)
+
+        io.to(game.redPlayer.socketID)('opponent built a piece', tile, inventoryPosition)
+      }
+    }
+  })
+
+  socket.on('player bought piece', function(host, isRedPlayer, newPlayerInventory, newPlayerGold, piece){
+    if (isRedPlayer)
+    {
+      gameList[host].redPlayer.gold = newPlayerGold
+      gameList[host].redPlayer.inventory = newPlayerInventory
+      opponentSocketID = gameList[host].bluePlayer.socketID
+    }
+    else
+    {
+      gameList[host].bluePlayer.gold = newPlayerGold
+      gameList[host].bluePlayer.inventory = newPlayerInventory
+      opponentSocketID = gameList[host].redPlayer.socketID
+    }
+    io.to(opponentSocketID).emit('opponent bought piece', newPlayerInventory, newPlayerGold, piece)
+  })
+
   socket.on('new socket connected to game', function(name){
     for (host in gameList)
     {
-      if (gameList.hasOwnProperty(host) && (gameList[host].redPlayer.Name == name || host == name))  
+      if (gameList.hasOwnProperty(host) && (gameList[host].redPlayer.Name == name))
       {
+        gameList[host].redPlayer.socketID = socket.id
+        io.to(socket.id).emit('new game data', gameList[host], pieces.buildings, pieces.units)
+      }
+      else if (gameList.hasOwnProperty(host) && (gameList[host].bluePlayer.Name == name))
+      {
+        gameList[host].bluePlayer.socketID = socket.id
         io.to(socket.id).emit('new game data', gameList[host], pieces.buildings, pieces.units)
       }
     }
@@ -66,27 +114,29 @@ io.on('connection', function(socket)
       io.to(socket.id).emit('chat message', 'Can\'t join your own game');
     }
 
+    //make new game and start it
     else
     {
-      var board = new Array(10);
-      for (var i = 0; i < board.length; i++) 
+      var board = new Array(9);
+      for (var col = 0; col < board.length; col++)
       {
-        board[i] = new Array(10);
-        for (var j=0; j < board[i].length; j++) 
+        board[col] = new Array(9);
+        for (var row=0; row < board[col].length; row++) 
         {
-          var tile = {piece: null, statuses: "Empty"}
-          board[i][j] = tile
+          var tile = {pieces: [], statuses: "Empty", DOMObject: null, row: row, col: col}
+          board[col][row] = tile
         }
       }
 
       var newGame = 
       {
-        redPlayer: {Name: name, gold: 0, blackResource: 0, whiteResource: 0, score: 0, inventory: []},
-        bluePlayer: {Name: host, gold: 0, blackResource: 0, whiteResource: 0, score: 0, inventory: []},
+        Host: host,
+        redPlayer: {socketID: null, Name: name, gold: 20, score: 0, inventory: Array(5)},
+        bluePlayer: {socketID: null, Name: host, gold: 20, score: 0, inventory: Array(5)},
         board: board,
         buildings: pieces.buildings,
         units: pieces.units,
-        playerTurn: "Red"
+        isRedPlayersTurn: true
       }
       gameList[host] = newGame
       socket.join(host)
@@ -143,7 +193,6 @@ io.on('connection', function(socket)
         typingUsers.splice(index, 1);
         io.emit('user stopped typing', typingUsers)
       }
-      delete userNickNames[socket.id]
     }
     io.emit('chat message', "A user disconnected");
     io.emit('online users update', userNickNames)
@@ -238,6 +287,10 @@ function onError(error) {
     default:
       throw error;
   }
+}
+
+function getKeyByValue(object, value) {
+  return Object.keys(object).find(key => object[key] === value);
 }
 
 /**
