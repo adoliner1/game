@@ -26,7 +26,7 @@ function Building(name, owner, boardAvatar, Types, buildableZones, cost, health,
 }
 
 //units
-var footman = new Unit("Footman", "", "FM", ["Unit"], ["Friendly"], 3, 1, 1, 1)
+var footman = new Unit("Footman", "", "FM", ["Unit"], ["Friendly"], 3, 1, 3, 1)
 var builder = new Unit("Footman", "", "BU", ["Unit", "Builder"], ["Friendly"], 3, 0, 1, 1)
 
 //buildings

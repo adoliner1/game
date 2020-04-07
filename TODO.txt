@@ -1,10 +1,12 @@
-board dimensions - platform placement
+fix cookie, name problems.. need to use chrome still?
 
-add building from inventory
+add movement
+
+flat piece on displaye
 
 add energy capacity
 
-
+figure out where the globals need to be
 
 CLEAN UP REFACTOR
 

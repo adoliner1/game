@@ -1,6 +1,18 @@
 $(function () 
 {
-	var socket = io();
+	//globals
+	var socket = io()
+
+	//modes are control flow variables
+	//storage variables to pass data between click handlers
+	window.tilesWhichCanCurrentlyBeBuiltOn = []
+	window.tilesWhichCanCurrentlyBeMovedTo = []
+	window.currentSelectedTile = {}
+	window.currentSelectedInventoryPiece = {}
+	window.currentInventoryPosition = null
+	window.buildMode = false
+	window.moveMode = false
+	window.castMode = false
 
 	socket.on('connect', function(){
 		socket.emit('new socket connected to game', readCookie("nickName"))
@@ -26,139 +38,132 @@ $(function ()
 		addPieceToTile(piece, game.board[tile.col][tile.row])
 	})
 
-	socket.on('new game data', function(newGame, buildingsList, unitsList)
+
+	socket.on('new game data', function(newGame, kingdomBuildings, kingdomUnits)
 	{
-		game = newGame
-		buildings = buildingsList
-		units = unitsList
-		name = readCookie("nickName")
-		buildableTiles = []
+		//global game variable
+		window.game = newGame
+		window.buildings = kingdomBuildings
+		window.units = kingdomUnits
+
 		attachDOMTilesToBoardTiles()
 		addPiecesToShop(buildings)
 		addPiecesToShop(units)
-		currentInventoryPosition = null
-		buildMode = false
 
-		$('#buyButton').prop('disabled', true);
-		$('#buyButton').hide()
-		$('#buildButton').prop('disabled', true);
-		$('#buildButton').hide()
+		disableAndHideButton($('#buyButton'))
+		disableAndHideButton($('#buildButton'))
+		disableAndHideButton($('#moveButton'))
 
-		if (game.redPlayer.Name == name)
+		//set global player variables based on name from cookie
+		if (game.redPlayer.Name == readCookie("nickName"))
 		{
-			isRedPlayer = true
-			playerInventory = game.redPlayer.inventory
-			playerInventoryDOM = $('#redInventory')
-			playerGold = game.redPlayer.gold
-			opponentInventory = game.bluePlayer.inventory
-			opponentInventoryDOM = $('#blueInventory')
-			opponentGold = game.bluePlayer.gold
+			window.isRedPlayer = true
+			window.playerInventory = game.redPlayer.inventory
+			window.playerInventoryDOM = $('#redInventory')
+			window.playerGold = game.redPlayer.gold
+			window.opponentInventory = game.bluePlayer.inventory
+			window.opponentInventoryDOM = $('#blueInventory')
+			window.opponentGold = game.bluePlayer.gold
 		}
 		else 
 		{
-			isRedPlayer = false
-			playerInventory = game.bluePlayer.inventory
-			playerInventoryDOM = $('#blueInventory')	
-			playerGold = game.bluePlayer.gold
-			opponentInventory = game.redPlayer.inventory
-			opponentInventoryDOM = $('#redInventory')
-			opponentGold = game.redPlayer.gold
+			window.isRedPlayer = false
+			window.playerInventory = game.bluePlayer.inventory
+			window.playerInventoryDOM = $('#blueInventory')	
+			window.playerGold = game.bluePlayer.gold
+			window.opponentInventory = game.redPlayer.inventory
+			window.opponentInventoryDOM = $('#redInventory')
+			window.opponentGold = game.redPlayer.gold
 		}
 
 		$('.inventory td').click(function tileClicked()
 		{
-		  $('#buyButton').prop('disabled', true);
-		  $('#buyButton').hide()
-		  var clickedBoardTile = this			
-		  if ((clickedBoardTile.closest('table').id) == 'redInventory')
-		  {
-		  	var inventory = game.redPlayer.inventory
-		  	var isThisPlayersInventory = isRedPlayer
-		  }
-		  else
-		  {
-		  	var inventory = game.bluePlayer.inventory
-		  	var isThisPlayersInventory = !isRedPlayer
-		  }
-		  currentInventoryPosition = clickedBoardTile.cellIndex
-		  var piece = inventory[currentInventoryPosition]
-		  if (piece != null)
-		  {
-			  updateDisplayerFromShopOrInventory(piece)
-			  selectedPiece = piece
-			  if(isThisPlayersInventory)
-			  {
-				  $('#buildButton').prop('disabled', false);
-				  $('#buildButton').show()
-			  }
-		  }
+			enableAndShowButton($('#buyButton'))
+			var clickedInventoryTile = this	
+			if ((clickedInventoryTile.closest('table').id) == 'redInventory')
+			{
+				var inventory = game.redPlayer.inventory
+				var isThisPlayersInventory = isRedPlayer
+			}
+			else
+			{
+				var inventory = game.bluePlayer.inventory
+				var isThisPlayersInventory = !isRedPlayer
+			}
+			currentInventoryPosition = clickedInventoryTile.cellIndex
+			currentSelectedInventoryPiece = inventory[currentInventoryPosition]
+			updateDisplayerFromShopOrInventory(currentSelectedInventoryPiece)
+			if (isThisPlayersInventory)
+				enableAndShowButton($('#buildButton'))
 		})
+	})
+	
 
-		$('#board td').click(function tileClicked()
+	//board click handler
+	$('#board td').click(function tileClicked()
+	{
+		var clickedDOMTableElement = this
+		var xpos = clickedDOMTableElement.cellIndex
+		var ypos = clickedDOMTableElement.parentNode.rowIndex
+		currentSelectedTile = game.board[xpos][ypos]
+
+		if (currentSelectedTile.piece != null && isThisPlayersTurn && playerOwnsPiece(isRedPlayer, currentSelectedTile.piece) && currentSelectedTile.piece.movement > 0)
 		{
-		  var clickedBoardTile = this
-		  var xpos = clickedBoardTile.cellIndex
-		  var ypos = clickedBoardTile.parentNode.rowIndex
-		  var tile = game.board[xpos][ypos]
+			window.tilePieceIsPotentiallyMovingFrom = currentSelectedTile
+			enableAndShowButton($('#moveButton'))
+		}
 
-		  if (buildMode)
-		  {
-		  	if (buildableTiles.includes(tile))
-		  	{ 
-		  		addPieceToTile(selectedPiece, tile)
-		  		buildMode = false
-		  		playerInventory[currentInventoryPosition] = null				
+		if (moveMode)
+		{
+			if (tilesWhichCanCurrentlyBeMovedTo.includes(currentSelectedTile))
+			{
+				addPieceToTile(tilePieceIsPotentiallyMovingFrom.piece, currentSelectedTile)
+				removePieceFromTile(tilePieceIsPotentiallyMovingFrom)
+				resetTilesColorsAndAddHover(tilesWhichCanCurrentlyBeMovedTo)
+				moveMode = false;
+				tilePieceIsPotentiallyMovingFrom = null;
+				disableAndHideButton($('#moveButton'))
+			}
+		}
+
+		else if (buildMode)
+		{
+			if (tilesWhichCanCurrentlyBeBuiltOn.includes(currentSelectedTile))
+			{ 
+				addPieceToTile(currentSelectedInventoryPiece, currentSelectedTile)
+				buildMode = false
+				playerInventory[currentInventoryPosition] = null				
 				playerInventoryDOM.find("tr").children()[currentInventoryPosition].innerHTML = ""
-				socket.emit('player built a piece', tile, currentInventoryPosition)
-				for (var tile of buildableTiles)
-				{
-					tile.DOMObject.css('background-color', '#c2c2a3')
-					tile.DOMObject.hover
-					(
-						function() 
-						{
-			  				$(this).css("background-color", "#FFFFE0")
-						},
-						function() 
-						{
-			  				$(this).css("background-color", "#c2c2a3")
-						}
-					)
-				}
-				buildableTiles = []
-		  	}
-		  }
+				socket.emit('player built a piece', currentSelectedTile, currentInventoryPosition)
 
-		  updateDisplayerFromBoardClick(tile)
-		  $('#buyButton').prop('disabled', true);
-		  $('#buyButton').hide()
-		  $('#buildButton').prop('disabled', true);
-		  $('#buildButton').hide()
-		})
-	});
+				resetTilesColorsAndAddHover(tilesWhichCanCurrentlyBeBuiltOn)
+				tilesWhichCanCurrentlyBeBuiltOn = []
+			}
+		}
 
+		updateDisplayerFromBoardClick(currentSelectedTile)
+		disableAndHideButton($('#buyButton'))
+		disableAndHideButton($('#buildButton'))
+	})
+
+	
 	$('#buildButton').submit(function(e)
 	{
 		e.preventDefault()
 		buildMode = true
-		buildableTiles = getBuildableTiles(selectedPiece)
-		for (tile of buildableTiles)
-		{
-			tile.DOMObject.css('background-color', '#99e699')
-			tile.DOMObject.hover
-			(
-				function()
-				{
-	  				$(this).css("background-color", "#FFFFE0")
-				},
-				function() 
-				{
-	  				$(this).css("background-color", "#99e699")
-				}
-			)
-		}
+		populateTilesWhichCanCurrentlyBeBuiltOn(currentSelectedInventoryPiece)
+		highLightTilesGreenAndAddHover(tilesWhichCanCurrentlyBeBuiltOn)
 	})
 
+	$('#moveButton').submit(function(e)
+	{
+		e.preventDefault()
+		moveMode = true
+
+		getMoveableTilesFromTileForPieceOnTile(currentSelectedTile)
+		highLightTilesGreenAndAddHover(tilesWhichCanCurrentlyBeMovedTo)
+	})
+	
 	$('#buyButton').submit(function(e)
 	{
 		e.preventDefault()
@@ -176,7 +181,7 @@ $(function ()
 			return	
 		}
 
-		if (playerGold < selectedPiece.cost)
+		if (playerGold < currentSelectedInventoryPiece.cost)
 		{
 			updateLog("Not enough money")
 			return
@@ -188,82 +193,167 @@ $(function ()
 			return
 		}
 
-    	playerGold = playerGold - selectedPiece.cost
-		for (var i = 0; i < playerInventory.length; i++) {
+    	playerGold = playerGold - currentSelectedInventoryPiece.cost
+		for (var i = 0; i < playerInventory.length; i++) 
+		{
 		    if (playerInventory[i] == null)
 		    {
-		    	var newPiece = {...selectedPiece};
+		    	var newPiece = {...currentSelectedInventoryPiece};
 		    	playerInventory[i] = newPiece
 		    	if (isRedPlayer)
-		    	{
 		    		newPiece.owner = "Red"
-		    	}
 		    	else
-		    	{
 					newPiece.owner = "Blue"
-		    	}
 		    	break
 		    }
 		}
-		inventoryDOM.innerHTML = selectedPiece.boardAvatar
+		inventoryDOM.innerHTML = currentSelectedInventoryPiece.boardAvatar
 		socket.emit('player bought piece', game.Host, isRedPlayer, playerInventory, playerGold, newPiece)
     })
 });
 
+function highLightTilesGreenAndAddHover(tiles)
+{
+	for (tile of tiles)
+	{
+		tile.DOMObject.css('background-color', '#99e699')
+		tile.DOMObject.hover
+		(
+			function()
+			{
+					$(this).css("background-color", "#FFFFE0")
+			},
+			function() 
+			{
+					$(this).css("background-color", "#99e699")
+			}
+		)
+	}
+}
 
-function addBuildableTilesFromRowStartToRowEnd(rowStart, rowEnd, col, buildableTiles)
+function resetTilesColorsAndAddHover(tiles)
+{
+	for (var tile of tiles)
+	{
+		tile.DOMObject.css('background-color', '#c2c2a3')
+		tile.DOMObject.hover
+		(
+			function() 
+			{
+  				$(this).css("background-color", "#FFFFE0")
+			},
+			function() 
+			{
+  				$(this).css("background-color", "#c2c2a3")
+			}
+		)
+	}
+}
+
+function playerOwnsPiece(isRedPlayer, piece)
+{
+	return (isRedPlayer && piece.owner == "Red") || (!isRedPlayer && piece.owner == "Blue")
+}
+
+function addBuildableTilesFromRowStartToRowEnd(rowStart, rowEnd, col)
 {
 	while (rowStart < rowEnd)
 	{
 		var tile = game.board[col][rowStart]
-		if (tile.pieces.length == 0)
+		if (tile.piece == null)
 		{
-			buildableTiles.push(tile)
+			tilesWhichCanCurrentlyBeBuiltOn.push(tile)
 		}
 		rowStart += 1
 	}
 }
 
-function getBuildableTiles(piece)
+function getMoveableTilesFromTileForPieceOnTile(tile)
 {
-	var buildableTiles = []
+	tilesWhichCanCurrentlyBeMovedTo = []
+	addMoveableTilesFromTileForPieceOnTileHelper(tile, piece.movement)
+	tilesWhichCanCurrentlyBeMovedTo = tilesWhichCanCurrentlyBeMovedTo.filter(onlyUnique)
+}
+
+function onlyUnique(value, index, self) { 
+    return self.indexOf(value) === index;
+}
+
+function addMoveableTilesFromTileForPieceOnTileHelper(tile, movementLeft)
+{
+	if (movementLeft == 0)
+		return
+
+	adjacentTiles = getAdjacentTiles(tile)
+	for (adjacentTile of adjacentTiles)
+	{
+		if (tileCanBeMovedOnTo(adjacentTile))
+		{
+			tilesWhichCanCurrentlyBeMovedTo.push(adjacentTile)
+			addMoveableTilesFromTileForPieceOnTileHelper(adjacentTile, movementLeft-1)
+		}
+	}
+}
+
+function populateTilesWhichCanCurrentlyBeBuiltOn(piece)
+{
+	tilesWhichCanCurrentlyBeBuiltOn = []
 	for (var col = 0; col < 9; col++)
 	{
 		if(piece.buildableZones.includes("Friendly"))
 		{
 			if (isRedPlayer)
 			{
-				addBuildableTilesFromRowStartToRowEnd(0, 3, col, buildableTiles)
+				addBuildableTilesFromRowStartToRowEnd(0, 3, col)
 			}
 			else
 			{
-				addBuildableTilesFromRowStartToRowEnd(6, 9, col, buildableTiles)
+				addBuildableTilesFromRowStartToRowEnd(6, 9, col)
 			}		
 		}
 
 		if(piece.buildableZones.includes("Neutral"))
 		{
-			addBuildableTilesFromRowStartToRowEnd(3, 6, col, buildableTiles)
+			addBuildableTilesFromRowStartToRowEnd(3, 6, col)
 		}
 
 		if(piece.buildableZones.includes("Enemy"))
 		{
 			if (!isRedPlayer)
 			{
-				addBuildableTilesFromRowStartToRowEnd(0, 3, col, buildableTiles)
+				addBuildableTilesFromRowStartToRowEnd(0, 3, col)
 			}
 			else
 			{
-				addBuildableTilesFromRowStartToRowEnd(6, 9, col, buildableTiles)
+				addBuildableTilesFromRowStartToRowEnd(6, 9, col)
 			}		
 		}
 	}
-	return buildableTiles
 }
 
-function getAdjacentLocations(coordinate)
+function getAdjacentTiles(tile)
 {
-	
+	adjacentTiles = []
+	if (tile.row - 1 >= 0)
+		adjacentTiles.push(game.board[tile.col][tile.row-1])
+	if (tile.row + 1 < 9)
+		adjacentTiles.push(game.board[tile.col][tile.row+1])
+	if (tile.col - 1 >= 0)
+		adjacentTiles.push(game.board[tile.col-1][tile.row])
+	if (tile.col + 1 < 9)
+		adjacentTiles.push(game.board[tile.col+1][tile.row])
+	return adjacentTiles
+}
+
+function getMoveablePieceFromTile(tile)
+{
+	console.log(tile.piece)
+	for (piece of tile.pieces)
+	{
+		if (!piece.isFlat)
+			return piece
+	}
+	return null
 }
 
 function isThisPlayersTurn(){
@@ -272,11 +362,7 @@ function isThisPlayersTurn(){
 
 function tileCanBeMovedOnTo(tile)
 {
-	if (tile.pieces == [] || tile.pieces[0].isFlat)
-	{
-		return true
-	}
-	return false
+	return (tile.piece == null)
 }
 
 function attachDOMTilesToBoardTiles()
@@ -293,14 +379,14 @@ function attachDOMTilesToBoardTiles()
 function addPieceToTile(piece, tile)
 {
   updateLog("Adding " + piece.Name + " to board at " + "(" + tile.col + "," + tile.row + ")")
-  tile.pieces.push(piece)
+  tile.piece = piece
   tile.DOMObject.html(piece.boardAvatar);
 }
 
 function removePieceFromTile(tile)
 {
-  updateLog("Removing " + tile.pieces.Name + " from board at " + "(" + tile.col + "," + tile.row + ")")
-  tile.pieces = []
+  updateLog("Removing " + tile.piece + " from board at " + "(" + tile.col + "," + tile.row + ")")
+  tile.piece = null
   tile.DOMObject.html("")
 }
 
@@ -320,47 +406,57 @@ function addPiecesToShop(piecesList){
 	//add stores click handler
 	$('#stores td').click(function storeTileClicked(){
 		var parentShop = this.closest('table')
-		var x = this.cellIndex
+		var index = this.cellIndex
+
 		if (parentShop.id == 'buildings')
-		{
-			selectedPiece = buildings[x]
-		}
+			currentSelectedInventoryPiece = buildings[index]
 		else if (parentShop.id == 'units')
-		{
-			selectedPiece = units[x]
-		}
+			currentSelectedInventoryPiece = units[index]
 		else if (parentShop.id == 'spells')
-		{
-			selectedPiece = spells[x]			
-		}
-		updateDisplayerFromShopOrInventory(selectedPiece)
+			currentSelectedInventoryPiece = spells[index]			
+
+		updateDisplayerFromShopOrInventory(currentSelectedInventoryPiece)
+
 		if (isThisPlayersTurn())
-		{
-			$('#buyButton').prop('disabled', false);
-			$('#buyButton').show()
-		}
+			enableAndShowButton($('#buyButton'))
 	})
 }
 
+function disableAndHideButton(button)
+{
+	button.prop('disabled', true);
+	button.hide()
+}
+
+function enableAndShowButton(button)
+{
+	button.prop('disabled', false);
+	button.show()
+}
+
 function updateDisplayerFromShopOrInventory(piece){
-	$('#displayerPieceName').html("Name: " + piece.Name)
-	$('#displayerPieceType').html("Type: " + piece.Type)
-	$('#displayerPieceMovement').html("Movement: " + piece.movement)
-	$('#displayerPieceAttack').html("Attack: " + piece.attack)
-	$('#displayerPieceHealth').html("Health: " + piece.health)
+	if(piece != null)
+	{
+		$('#displayerPieceName').html("Name: " + piece.Name)
+		$('#displayerPieceType').html("Type: " + piece.Type)
+		$('#displayerPieceMovement').html("Movement: " + piece.movement)
+		$('#displayerPieceAttack').html("Attack: " + piece.attack)
+		$('#displayerPieceHealth').html("Health: " + piece.health)			
+	}
 }
 
 function updateDisplayerFromBoardClick(tile){
-	piece = tile.piece
+
 	$('#displayerTilePlatform').html("Platform: " + tile.Platform)
-	$('#displayerTileStatuses').html("Tile Statuses: " + tile.statuses)	  
-	if(piece) 
+	$('#displayerTileStatuses').html("Tile Statuses: " + tile.statuses)
+
+	if(tile.piece != null)
 	{
-	  $('#displayerPieceName').html("Name: " + piece.Name)
-	  $('#displayerPieceType').html("Type: " + piece.Type)
-	  $('#displayerPieceMovement').html("Movement: " + piece.movement)
-	  $('#displayerPieceAttack').html("Attack: " + piece.attack)
-	  $('#displayerPieceHealth').html("Health: " + piece.health)
+	  $('#displayerPieceName').html("Name: " + tile.piece.Name)
+	  $('#displayerPieceType').html("Type: " + tile.piece.Type)
+	  $('#displayerPieceMovement').html("Movement: " + tile.piece.movement)
+	  $('#displayerPieceAttack').html("Attack: " + tile.piece.attack)
+	  $('#displayerPieceHealth').html("Health: " + tile.piece.health)
 	}
 	else
 	{

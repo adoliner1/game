@@ -52,7 +52,7 @@ io.on('connection', function(socket)
         game = gameList[host]
         piece = game.redPlayer.inventory[inventoryPosition]
         game.redPlayer.inventory[inventoryPosition] = null
-        game.board[tile.col][tile.row].pieces.push(piece)
+        game.board[tile.col][tile.row].piece = piece
 
         io.to(game.bluePlayer.socketID).emit('opponent built a piece', tile, inventoryPosition)
 
@@ -62,7 +62,7 @@ io.on('connection', function(socket)
         game = gameList[host]
         piece = game.bluePlayer.inventory[inventoryPosition]
         game.bluePlayer.inventory[inventoryPosition] = null
-        game.board[tile.col][tile.row].pieces.push(piece)
+        game.board[tile.col][tile.row].piece = piece
 
         io.to(game.redPlayer.socketID)('opponent built a piece', tile, inventoryPosition)
       }
@@ -82,6 +82,7 @@ io.on('connection', function(socket)
       gameList[host].bluePlayer.inventory = newPlayerInventory
       opponentSocketID = gameList[host].redPlayer.socketID
     }
+    
     io.to(opponentSocketID).emit('opponent bought piece', newPlayerInventory, newPlayerGold, piece)
   })
 
@@ -123,7 +124,7 @@ io.on('connection', function(socket)
         board[col] = new Array(9);
         for (var row=0; row < board[col].length; row++) 
         {
-          var tile = {pieces: [], statuses: "Empty", DOMObject: null, row: row, col: col}
+          var tile = {piece: null, flatPiece: null, statuses: "Empty", DOMObject: null, row: row, col: col}
           board[col][row] = tile
         }
       }
