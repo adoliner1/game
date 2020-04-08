@@ -18,6 +18,20 @@ $(function ()
 		socket.emit('new socket connected to game', readCookie("nickName"))
 	});
 
+	socket.on('opponent moved a piece', function(tileMovedFrom, tileMovedTo){
+	    addPieceToTile(tileMovedFrom.piece, game.board[tileMovedTo.col][tileMovedTo.row])
+	    removePieceFromTile(game.board[tileMovedFrom.col][tileMovedFrom.row])
+	})
+
+	socket.on('opponent activated a piece', function(tileActivatedOn, pieceIsFlat){
+		if(pieceIsFlat)
+		  game.board[tileActivatedOn.col][tileActivatedOn.row].flatPiece.energy += 1
+		else
+		  game.board[tileActivatedOn.col][tileActivatedOn.row].piece.energy += 1
+
+		//log this change
+	})
+
 	socket.on('opponent bought piece', function(newPlayerInventory, newPlayerGold, piece){
 		opponentInventory = newPlayerInventory
 		opponentGold = newPlayerGold
@@ -50,9 +64,12 @@ $(function ()
 		addPiecesToShop(buildings)
 		addPiecesToShop(units)
 
+		//TODO: add existing pieces to board
+
 		disableAndHideButton($('#buyButton'))
 		disableAndHideButton($('#buildButton'))
 		disableAndHideButton($('#moveButton'))
+		disableAndHideButton($('#activateButton'))
 
 		//set global player variables based on name from cookie
 		if (game.redPlayer.Name == readCookie("nickName"))
@@ -61,9 +78,11 @@ $(function ()
 			window.playerInventory = game.redPlayer.inventory
 			window.playerInventoryDOM = $('#redInventory')
 			window.playerGold = game.redPlayer.gold
+			window.playerEnergy = game.redPlayer.energy
 			window.opponentInventory = game.bluePlayer.inventory
 			window.opponentInventoryDOM = $('#blueInventory')
 			window.opponentGold = game.bluePlayer.gold
+			window.opponentEnergy = game.bluePlayer.energy
 		}
 		else 
 		{
@@ -71,9 +90,11 @@ $(function ()
 			window.playerInventory = game.bluePlayer.inventory
 			window.playerInventoryDOM = $('#blueInventory')	
 			window.playerGold = game.bluePlayer.gold
+			window.playerEnergy = game.bluePlayer.energy
 			window.opponentInventory = game.redPlayer.inventory
 			window.opponentInventoryDOM = $('#redInventory')
 			window.opponentGold = game.redPlayer.gold
+			window.opponentEnergy = game.redPlayer.energy
 		}
 
 		$('.inventory td').click(function tileClicked()
@@ -107,10 +128,18 @@ $(function ()
 		var ypos = clickedDOMTableElement.parentNode.rowIndex
 		currentSelectedTile = game.board[xpos][ypos]
 
-		if (currentSelectedTile.piece != null && isThisPlayersTurn && playerOwnsPiece(isRedPlayer, currentSelectedTile.piece) && currentSelectedTile.piece.movement > 0)
+		if (currentSelectedTile.piece != null && isThisPlayersTurn && playerOwnsPiece(isRedPlayer, currentSelectedTile.piece))
 		{
-			window.tilePieceIsPotentiallyMovingFrom = currentSelectedTile
-			enableAndShowButton($('#moveButton'))
+			if (currentSelectedTile.piece.movement > 0)
+			{	
+				window.tilePieceIsPotentiallyMovingFrom = currentSelectedTile
+				enableAndShowButton($('#moveButton'))
+			}
+			if (currentSelectedTile.piece.energy < currentSelectedTile.piece.energyCapacity && playerEnergy > 0)
+			{
+				window.piecePotentiallyBeingActivated = currentSelectedTile.piece
+				enableAndShowButton($('#activateButton'))
+			}
 		}
 
 		if (moveMode)
@@ -118,6 +147,7 @@ $(function ()
 			if (tilesWhichCanCurrentlyBeMovedTo.includes(currentSelectedTile))
 			{
 				addPieceToTile(tilePieceIsPotentiallyMovingFrom.piece, currentSelectedTile)
+				socket.emit('player moved a piece', game.Host, tilePieceIsPotentiallyMovingFrom, currentSelectedTile, isRedPlayer)
 				removePieceFromTile(tilePieceIsPotentiallyMovingFrom)
 				resetTilesColorsAndAddHover(tilesWhichCanCurrentlyBeMovedTo)
 				moveMode = false;
@@ -146,6 +176,14 @@ $(function ()
 		disableAndHideButton($('#buildButton'))
 	})
 
+	$('#activateButton').submit(function(e)
+	{
+		e.preventDefault()
+		piecePotentiallyBeingActivated.energy += 1
+		$('#displayerPieceEnergy').html("Energy: " + piecePotentiallyBeingActivated.energy)
+		playerEnergy -= 1
+		socket.emit('player activated a piece', game.Host, currentSelectedTile, piecePotentiallyBeingActivated.isFlat, isRedPlayer)
+	})
 	
 	$('#buildButton').submit(function(e)
 	{
@@ -441,7 +479,7 @@ function updateDisplayerFromShopOrInventory(piece){
 		$('#displayerPieceType').html("Type: " + piece.Type)
 		$('#displayerPieceMovement').html("Movement: " + piece.movement)
 		$('#displayerPieceAttack').html("Attack: " + piece.attack)
-		$('#displayerPieceHealth').html("Health: " + piece.health)			
+		$('#displayerPieceHealth').html("Health: " + piece.health)
 	}
 }
 
@@ -457,6 +495,7 @@ function updateDisplayerFromBoardClick(tile){
 	  $('#displayerPieceMovement').html("Movement: " + tile.piece.movement)
 	  $('#displayerPieceAttack').html("Attack: " + tile.piece.attack)
 	  $('#displayerPieceHealth').html("Health: " + tile.piece.health)
+	  $('#displayerPieceEnergy').html("Energy: " + tile.piece.energy)
 	}
 	else
 	{
@@ -465,6 +504,7 @@ function updateDisplayerFromBoardClick(tile){
 	  $('#displayerPieceMovement').html("")
 	  $('#displayerPieceAttack').html("")
 	  $('#displayerPieceHealth').html("")
+	  $('#displayerPieceEnergy').html("")
 	}
 }
 

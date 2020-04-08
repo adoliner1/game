@@ -1,14 +1,18 @@
 fix cookie, name problems.. need to use chrome still?
 
-add movement
+flat piece on displayer
 
-flat piece on displaye
+change "activation" to "energize"?
 
-add energy capacity
+add platforms
 
-figure out where the globals need to be
+button placement - move/activate/buy/build
 
-CLEAN UP REFACTOR
+add pieces to board when a new game starts if they're there (someone reconnected)
+
+add log updates for everything
+
+overall styling for game
 
 
 0, 0            9, 0

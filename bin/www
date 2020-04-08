@@ -43,6 +43,37 @@ io.on('connection', function(socket)
     }
   }
 
+  socket.on('player activated a piece', function(host, tileActivatedOn, pieceIsFlat, isRedPlayer)
+  {
+    game = gameList[host]
+
+    if(pieceIsFlat)
+      game.board[tileActivatedOn.col][tileActivatedOn.row].flatPiece.energy += 1
+    else
+      game.board[tileActivatedOn.col][tileActivatedOn.row].piece.energy += 1      
+
+    if (isRedPlayer)
+      opponentSocketID = gameList[host].bluePlayer.socketID
+    else
+      opponentSocketID = gameList[host].redPlayer.socketID
+
+    io.to(opponentSocketID).emit('opponent activated a piece', tileActivatedOn, pieceIsFlat)
+  })
+
+  socket.on('player moved a piece', function(host, tileMovedFrom, tileMovedTo, isRedPlayer)
+  {
+    game = gameList[host]
+    game.board[tileMovedTo.col][tileMovedTo.row].piece = game.board[tileMovedFrom.col][tileMovedFrom.row].piece
+    game.board[tileMovedFrom.col][tileMovedFrom.row].piece = null
+
+    if (isRedPlayer)
+      opponentSocketID = gameList[host].bluePlayer.socketID
+    else
+      opponentSocketID = gameList[host].redPlayer.socketID
+
+    io.to(opponentSocketID).emit('opponent moved a piece', tileMovedFrom, tileMovedTo)
+  })
+
   socket.on('player built a piece', function(tile, inventoryPosition){
     //find player and their game
     for (host in gameList)
@@ -132,8 +163,8 @@ io.on('connection', function(socket)
       var newGame = 
       {
         Host: host,
-        redPlayer: {socketID: null, Name: name, gold: 20, score: 0, inventory: Array(5)},
-        bluePlayer: {socketID: null, Name: host, gold: 20, score: 0, inventory: Array(5)},
+        redPlayer: {socketID: null, Name: name, gold: 20, score: 0, energy: 2, inventory: Array(5)},
+        bluePlayer: {socketID: null, Name: host, gold: 20, score: 0, energy: 2, inventory: Array(5)},
         board: board,
         buildings: pieces.buildings,
         units: pieces.units,
