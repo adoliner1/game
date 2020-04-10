@@ -22,7 +22,7 @@ app.set('port', port);
 
 var server = http.createServer(app);
 var io = require('socket.io')(server);
-
+  
 //globals
 var userNickNames = {};
 var typingUsers = [];
@@ -159,6 +159,20 @@ io.on('connection', function(socket)
           board[col][row] = tile
         }
       }
+
+      //add to pieces.js
+
+      var moneyPlatform = {name: "Money Platform", platformType: "Money", owner: null, boardAvatar: "MP", isFlat: true}
+      var victoryPointPlatform = {name: "Victory Platform", platformType: "Victory", owner: null, boardAvatar: "VP", isFlat: true}
+      var energyPlatform = {name: "Energy Platform", platformType: "Energy", owner: null, boardAvatar: "EP", isFlat: true}
+
+      //set platforms
+      board[1][3].flatPiece = moneyPlatform
+      board[7][3].flatPiece = energyPlatform
+      board[1][5].flatPiece = moneyPlatform
+      board[7][5].flatPiece = energyPlatform
+      board[4][4].flatPiece = victoryPointPlatform
+
 
       var newGame = 
       {

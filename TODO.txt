@@ -1,14 +1,10 @@
 fix cookie, name problems.. need to use chrome still?
 
-flat piece on displayer
-
 change "activation" to "energize"?
 
 add platforms
 
 button placement - move/activate/buy/build
-
-add pieces to board when a new game starts if they're there (someone reconnected)
 
 add log updates for everything
 
