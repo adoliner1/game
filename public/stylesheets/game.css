@@ -21,8 +21,8 @@ html {height: 100%;}
 #pieceDisplayer {{position: relative; top: 0px;}}
 #tileDisplayer {position: relative;}
 
-#buyButton {position: absolute; top: 230px; right: 400px;}
-#buildButton {position: absolute; top: 230px; right: 400px;}
+#buyButton {position: absolute; top: 230px; right: 250px;}
+#buildButton {position: absolute; top: 230px; right: 325px;}
 #moveButton {position: absolute; top: 230px; right: 400px;}
 #activateButton {position: absolute; top: 230px; right: 475px;}
 

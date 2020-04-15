@@ -2,9 +2,7 @@ fix cookie, name problems.. need to use chrome still?
 
 change "activation" to "energize"?
 
-add platforms
-
-button placement - move/activate/buy/build
+client has to make buy, move, attack requests, change game state after server responds
 
 add log updates for everything
 

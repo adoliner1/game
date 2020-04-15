@@ -8,6 +8,7 @@ var app = require('../app');
 var debug = require('debug')('pugpractice:server');
 var http = require('http');
 var pieces = require('../public/javascripts/pieces.js')
+var _ = require('lodash');
 
 /**
  * Get port from environment and store in Express.
@@ -43,98 +44,201 @@ io.on('connection', function(socket)
     }
   }
 
-  socket.on('player activated a piece', function(host, tileActivatedOn, pieceIsFlat, isRedPlayer)
+  socket.on('new socket connected to game', function(name)
   {
-    game = gameList[host]
-
-    if(pieceIsFlat)
-      game.board[tileActivatedOn.col][tileActivatedOn.row].flatPiece.energy += 1
-    else
-      game.board[tileActivatedOn.col][tileActivatedOn.row].piece.energy += 1      
-
-    if (isRedPlayer)
-      opponentSocketID = gameList[host].bluePlayer.socketID
-    else
-      opponentSocketID = gameList[host].redPlayer.socketID
-
-    io.to(opponentSocketID).emit('opponent activated a piece', tileActivatedOn, pieceIsFlat)
-  })
-
-  socket.on('player moved a piece', function(host, tileMovedFrom, tileMovedTo, isRedPlayer)
-  {
-    game = gameList[host]
-    game.board[tileMovedTo.col][tileMovedTo.row].piece = game.board[tileMovedFrom.col][tileMovedFrom.row].piece
-    game.board[tileMovedFrom.col][tileMovedFrom.row].piece = null
-
-    if (isRedPlayer)
-      opponentSocketID = gameList[host].bluePlayer.socketID
-    else
-      opponentSocketID = gameList[host].redPlayer.socketID
-
-    io.to(opponentSocketID).emit('opponent moved a piece', tileMovedFrom, tileMovedTo)
-  })
-
-  socket.on('player built a piece', function(tile, inventoryPosition){
-    //find player and their game
-    for (host in gameList)
-    {
-      if (gameList.hasOwnProperty(host) && gameList[host].redPlayer.socketID == socket.id)
-      {
-        game = gameList[host]
-        piece = game.redPlayer.inventory[inventoryPosition]
-        game.redPlayer.inventory[inventoryPosition] = null
-        game.board[tile.col][tile.row].piece = piece
-
-        io.to(game.bluePlayer.socketID).emit('opponent built a piece', tile, inventoryPosition)
-
-      }
-      else if (gameList.hasOwnProperty(host) && gameList[host].bluePlayer.socketID == socket.id)
-      {
-        game = gameList[host]
-        piece = game.bluePlayer.inventory[inventoryPosition]
-        game.bluePlayer.inventory[inventoryPosition] = null
-        game.board[tile.col][tile.row].piece = piece
-
-        io.to(game.redPlayer.socketID)('opponent built a piece', tile, inventoryPosition)
-      }
-    }
-  })
-
-  socket.on('player bought piece', function(host, isRedPlayer, newPlayerInventory, newPlayerGold, piece){
-    if (isRedPlayer)
-    {
-      gameList[host].redPlayer.gold = newPlayerGold
-      gameList[host].redPlayer.inventory = newPlayerInventory
-      opponentSocketID = gameList[host].bluePlayer.socketID
-    }
-    else
-    {
-      gameList[host].bluePlayer.gold = newPlayerGold
-      gameList[host].bluePlayer.inventory = newPlayerInventory
-      opponentSocketID = gameList[host].redPlayer.socketID
-    }
-    
-    io.to(opponentSocketID).emit('opponent bought piece', newPlayerInventory, newPlayerGold, piece)
-  })
-
-  socket.on('new socket connected to game', function(name){
     for (host in gameList)
     {
       if (gameList.hasOwnProperty(host) && (gameList[host].redPlayer.Name == name))
       {
         gameList[host].redPlayer.socketID = socket.id
-        io.to(socket.id).emit('new game data', gameList[host], pieces.buildings, pieces.units)
+        socket.join(host)
+        io.to(socket.id).emit('new game data', gameList[host])
       }
       else if (gameList.hasOwnProperty(host) && (gameList[host].bluePlayer.Name == name))
       {
         gameList[host].bluePlayer.socketID = socket.id
-        io.to(socket.id).emit('new game data', gameList[host], pieces.buildings, pieces.units)
+        socket.join(host)
+        io.to(socket.id).emit('new game data', gameList[host])
       }
     }
   })
 
+  socket.on('request to energize', function(energizeT)
+  {
+    var game = findGameFromSocketID(socket.id)
+
+    if (game == null)
+    {
+      io.to(socket.id).emit("new log message", "No such game")
+      return
+    }
+
+    var isRedPlayer = findIfPlayerIsRedPlayerInGameFromSocketID(game, socket.id)
+    var player = (isRedPlayer) ? game.redPlayer : game.bluePlayer
+    var energizeTile = game.board[energizeT.col][energizeT.row]
+
+    if (!findIfItsAPlayersTurnInGame(isRedPlayer, game))
+    {
+      io.to(socket.id).emit("new log message", "Not your turn")
+      return  
+    }
+
+    if (!findIfAPlayerOwnsAPiece(isRedPlayer, energizeTile.piece))
+    {
+      io.to(socket.id).emit("new log message", "You don't own that piece!")
+      return        
+    }
+
+
+    if (energizeTile.piece.energy >= energizeTile.piece.energyCapacity)
+    {
+      io.to(socket.id).emit("new log message", "Already at maxmimum energy")
+      return       
+    }
+
+    if (player.energy <= 0)
+    {
+      io.to(socket.id).emit("new log message", "No energy to spend")
+      return             
+    }
+
+    energizeTile.piece.energy ++
+    player.energy --
+
+    io.to(game.Host).emit('player energized a piece', isRedPlayer, energizeTile, player.energy)     
+  })
+
+  socket.on('request to move a piece', function(fTile, tTile)
+  {
+    var game = findGameFromSocketID(socket.id)
+
+    if (game == null)
+    {
+      io.to(socket.id).emit("new log message", "No such game")
+      return
+    }
+
+    var isRedPlayer = findIfPlayerIsRedPlayerInGameFromSocketID(game, socket.id)
+    var player = (isRedPlayer) ? game.redPlayer : game.bluePlayer
+
+    if (!findIfItsAPlayersTurnInGame(isRedPlayer, game))
+    {
+      io.to(socket.id).emit("new log message", "Not your turn")
+      return  
+    }
+
+    if (!findIfAPlayerOwnsAPiece(isRedPlayer, fTile.piece))
+    {
+      io.to(socket.id).emit("new log message", "You don't own that piece!")
+      return        
+    }
+
+    var fromTile = game.board[fTile.col][fTile.row]
+    var toTile = game.board[tTile.col][tTile.row]
+
+    var moveableTiles = getMoveableTilesFromTileForPieceOnTile(fromTile, game.board)
+
+    if (!moveableTiles.includes(toTile))
+    {
+      io.to(socket.id).emit("new log message", "Piece can't move there")
+      return  
+    }
+
+    toTile.piece = fromTile.piece
+    fromTile.piece = null
+
+    var distanceMoved = Math.abs(fromTile.col-toTile.col) + Math.abs(fromTile.row-toTile.row)
+    toTile.piece.movement -= distanceMoved 
+
+    io.to(game.Host).emit('player moved a piece', fromTile, toTile)     
+  })
+
+  socket.on('request piece purchase', function(piece)
+  {
+    var game = findGameFromSocketID(socket.id)
+
+    if (game == null)
+    {
+      io.to(socket.id).emit("new log message", "No such game")
+      return
+    }
+
+    var isRedPlayer = findIfPlayerIsRedPlayerInGameFromSocketID(game, socket.id)
+    var player = (isRedPlayer) ? game.redPlayer : game.bluePlayer
+
+    if (!findIfItsAPlayersTurnInGame(isRedPlayer, game))
+    {
+      io.to(socket.id).emit("new log message", "Not your turn")
+      return  
+    }
+
+    if (player.gold < piece.cost)
+    {
+      io.to(socket.id).emit("new log message", "Not enough money")
+      return
+    }
+
+    if (!player.inventory.includes(undefined))
+    {
+      io.to(socket.id).emit("new log message", "No room in inventory")
+      return
+    }
+
+    player.gold = player.gold - piece.cost
+    for (var i = 0; i < player.inventory.length; i++) 
+    {
+        if (player.inventory[i] == null)
+        {
+          var newPiece = _.cloneDeep(piece);
+          player.inventory[i] = newPiece
+          if (isRedPlayer)
+            newPiece.owner = "Red"
+          else
+            newPiece.owner = "Blue"
+          break
+        }
+    }
+    io.to(game.Host).emit('player bought a piece', isRedPlayer, player.inventory, player.gold) 
+  })
+
+  socket.on('request to build a piece', function(inventoryPosition, tile)
+  {
+    var game = findGameFromSocketID(socket.id)
+
+    if (game == null)
+    {
+      io.to(socket.id).emit("new log message", "No such game")
+      return
+    }
+
+    tileToBuildOn = game.board[tile.col][tile.row]
+    var isRedPlayer = findIfPlayerIsRedPlayerInGameFromSocketID(game, socket.id)
+    var player = (isRedPlayer) ? game.redPlayer : game.bluePlayer
+
+    if (!findIfItsAPlayersTurnInGame(isRedPlayer, game))
+    {
+      io.to(socket.id).emit("new log message", "Not your turn")
+      return  
+    }
+
+    var tilesWhichCanBuiltOn = populateTilesWhichCanCurrentlyBeBuiltOn(player.inventory[inventoryPosition], game.board, isRedPlayer)
+
+    if(!tilesWhichCanBuiltOn.includes(tileToBuildOn))
+    {
+      io.to(socket.id).emit("new log message", "Can't build there")
+      return        
+    }
+
+    tileToBuildOn.piece = player.inventory[inventoryPosition]
+    player.inventory[inventoryPosition] = null
+
+    io.to(game.Host).emit('player built a piece', isRedPlayer, player.inventory, tileToBuildOn)
+  })
+
+
   //lobby functions
-  socket.on('user trying to join game in lobby', function(host){
+  socket.on('user trying to join game in lobby', function(host)
+  {
     name = userNickNames[socket.id]
     if (name == undefined) 
     {
@@ -162,9 +266,9 @@ io.on('connection', function(socket)
 
       //add to pieces.js
 
-      var moneyPlatform = {name: "Money Platform", platformType: "Money", owner: null, boardAvatar: "MP", isFlat: true}
-      var victoryPointPlatform = {name: "Victory Platform", platformType: "Victory", owner: null, boardAvatar: "VP", isFlat: true}
-      var energyPlatform = {name: "Energy Platform", platformType: "Energy", owner: null, boardAvatar: "EP", isFlat: true}
+      var moneyPlatform = {Name: "Money Platform", platformType: "Money", owner: null, boardAvatar: "MP", isFlat: true}
+      var victoryPointPlatform = {Name: "Victory Platform", platformType: "Victory", owner: null, boardAvatar: "VP", isFlat: true}
+      var energyPlatform = {Name: "Energy Platform", platformType: "Energy", owner: null, boardAvatar: "EP", isFlat: true}
 
       //set platforms
       board[1][3].flatPiece = moneyPlatform
@@ -172,7 +276,6 @@ io.on('connection', function(socket)
       board[1][5].flatPiece = moneyPlatform
       board[7][5].flatPiece = energyPlatform
       board[4][4].flatPiece = victoryPointPlatform
-
 
       var newGame = 
       {
@@ -185,7 +288,7 @@ io.on('connection', function(socket)
         isRedPlayersTurn: true
       }
       gameList[host] = newGame
-      socket.join(host)
+      socket.join(host)      
       io.to(host).emit('trigger redirect for new game', host)
     }
   })
@@ -291,6 +394,30 @@ Object.prototype.getKeyByValue = function( value ) {
     return false
 }
 
+function findIfItsAPlayersTurnInGame(isRedPlayer, game){
+  return (game.isRedPlayersTurn && isRedPlayer) || (!game.isRedPlayersTurn && !isRedPlayer)
+}
+
+function findIfAPlayerOwnsAPiece(isRedPlayer, piece){
+  return (piece.owner == 'Red' && isRedPlayer) || (piece.owner == 'Blue' && !isRedPlayer)
+}
+
+function findGameFromSocketID(socketID)
+{
+  for (host in gameList)
+    if (gameList.hasOwnProperty(host) && (gameList[host].redPlayer.socketID == socketID || gameList[host].bluePlayer.socketID == socketID))
+      return gameList[host]
+  return null
+}
+
+function findIfPlayerIsRedPlayerInGameFromSocketID(game, socketID)
+{
+  if (game.redPlayer.socketID == socketID)
+    return true
+  else
+    return false
+}
+
 function normalizePort(val) {
   var port = parseInt(val, 10);
 
@@ -362,4 +489,100 @@ function readCookie(name) {
             return decodeURIComponent(c.substring(nameEQ.length, c.length));
     }
     return null;
+}
+
+function getAdjacentTiles(tile, board)
+{
+  adjacentTiles = []
+  if (tile.row - 1 >= 0)
+    adjacentTiles.push(board[tile.col][tile.row-1])
+  if (tile.row + 1 < 9)
+    adjacentTiles.push(board[tile.col][tile.row+1])
+  if (tile.col - 1 >= 0)
+    adjacentTiles.push(board[tile.col-1][tile.row])
+  if (tile.col + 1 < 9)
+    adjacentTiles.push(board[tile.col+1][tile.row])
+  return adjacentTiles
+}
+
+function getMoveableTilesFromTileForPieceOnTile(tile, board)
+{
+  var tilesWhichCanCurrentlyBeMovedTo = []
+  addMoveableTilesFromTileForPieceOnTileHelper(tile, tile.piece.movement, tilesWhichCanCurrentlyBeMovedTo, board)
+  return tilesWhichCanCurrentlyBeMovedTo.filter(onlyUnique)
+}
+
+function onlyUnique(value, index, self) { 
+    return self.indexOf(value) === index;
+}
+
+function addMoveableTilesFromTileForPieceOnTileHelper(tile, movementLeft, tilesWhichCanCurrentlyBeMovedTo, board)
+{
+  if (movementLeft == 0)
+    return
+
+  adjacentTiles = getAdjacentTiles(tile, board)
+  for (adjacentTile of adjacentTiles)
+  {
+    if (tileCanBeMovedOnTo(adjacentTile))
+    {
+      tilesWhichCanCurrentlyBeMovedTo.push(adjacentTile)
+      addMoveableTilesFromTileForPieceOnTileHelper(adjacentTile, movementLeft-1, tilesWhichCanCurrentlyBeMovedTo, board)
+    }
+  }
+}
+
+function tileCanBeMovedOnTo(tile)
+{
+  return (tile.piece == null)
+}
+
+function populateTilesWhichCanCurrentlyBeBuiltOn(piece, board, isRedPlayer)
+{
+  var tilesWhichCanCurrentlyBeBuiltOn = []
+  for (var col = 0; col < 9; col++)
+  {
+    if(piece.buildableZones.includes("Friendly"))
+    {
+      if (isRedPlayer)
+      {
+        addBuildableTilesFromRowStartToRowEnd(0, 3, col, board, tilesWhichCanCurrentlyBeBuiltOn)
+      }
+      else
+      {
+        addBuildableTilesFromRowStartToRowEnd(6, 9, col, board, tilesWhichCanCurrentlyBeBuiltOn)
+      }   
+    }
+
+    if(piece.buildableZones.includes("Neutral"))
+    {
+      addBuildableTilesFromRowStartToRowEnd(3, 6, col, board, tilesWhichCanCurrentlyBeBuiltOn)
+    }
+
+    if(piece.buildableZones.includes("Enemy"))
+    {
+      if (!isRedPlayer)
+      {
+        addBuildableTilesFromRowStartToRowEnd(0, 3, col, board, tilesWhichCanCurrentlyBeBuiltOn)
+      }
+      else
+      {
+        addBuildableTilesFromRowStartToRowEnd(6, 9, col, board, tilesWhichCanCurrentlyBeBuiltOn)
+      }   
+    }
+  }
+  return tilesWhichCanCurrentlyBeBuiltOn
+}
+
+function addBuildableTilesFromRowStartToRowEnd(rowStart, rowEnd, col, board, tilesWhichCanCurrentlyBeBuiltOn)
+{
+  while (rowStart < rowEnd)
+  {
+    var tile = board[col][rowStart]
+    if (tile.piece == null && tile.flatPiece == null)
+    {
+      tilesWhichCanCurrentlyBeBuiltOn.push(tile)
+    }
+    rowStart += 1
+  }
 }
