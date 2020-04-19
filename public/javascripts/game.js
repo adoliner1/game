@@ -4,18 +4,19 @@ $(function ()
 	var socket = io()
 
 	//modes are control flow variables
-	//storage variables to pass data between click handlers
-	window.tilesWhichCanCurrentlyBeBuiltOn = []
-	window.tilesWhichCanCurrentlyBeMovedTo = []
+	window.allTiles = []
+	window.activeTiles = []
 
-	window.currentSelectedTile = {}
+	//storage variables to pass data between click handlers
+	window.currentlySelectedTile = {}
+	window.currentInventoryPosition = null
 	window.currentSelectedInventoryPiece = {}
 	window.currentlySelectedStorePiece = {}
-	window.currentInventoryPosition = null
 
 	window.buildMode = false
 	window.moveMode = false
 	window.castMode = false
+	window.attackMode = false
 
 	disableAllButtons()
 	//server emit handlers
@@ -39,11 +40,15 @@ $(function ()
 		addPiecesToShop(game.units)
 		addStoreClickHandler()
 
-		//add pieces to board
+		//add pieces to inventories
+
+		//add pieces to board and populate allTiles
 		for (var col = 0; col < game.board.length; col++)
 		{
 			for (var row=0; row < game.board[col].length; row++) 
 			{
+				allTiles.push(game.board[col][row])
+
 				if (game.board[col][row].piece != null)
 					addPieceToTile(game.board[col][row].piece, game.board[col][row])
 				if (game.board[col][row].flatPiece != null)
@@ -64,6 +69,7 @@ $(function ()
 			window.opponentGold = game.bluePlayer.gold
 			window.opponentEnergy = game.bluePlayer.energy
 		}
+
 		else 
 		{
 			window.isRedPlayer = false
@@ -116,9 +122,15 @@ $(function ()
 		{
 			$('#displayerPieceEnergy').html("Energy: " + energizedPiece.energy)
 			if (energizingPlayer.energy > 0 && energizedPiece.energy < energizedPiece.energyCapacity)
-				enableAndShowButton($("#activateButton"))
+				enableAndShowButton($("#energizeButton"))
 		}
 	})
+
+	socket.on('player ended their turn', function()
+		{
+			game.isRedPlayersTurn = !game.isRedPlayersTurn
+			updateLog("Turn Ended")
+		})
 
 	//store click handler
 	function addStoreClickHandler()
@@ -161,7 +173,7 @@ $(function ()
 		currentInventoryPosition = clickedInventoryTile.cellIndex
 		currentSelectedInventoryPiece = inventory[currentInventoryPosition]
 		updateDisplayerFromShopOrInventory(currentSelectedInventoryPiece)
-		if (isThisPlayersInventory)
+		if (isThisPlayersInventory && currentSelectedInventoryPiece != null)
 			enableAndShowButton($('#buildButton'))
 	})
 
@@ -172,51 +184,78 @@ $(function ()
 		var clickedDOMTableElement = this
 		var xpos = clickedDOMTableElement.cellIndex
 		var ypos = clickedDOMTableElement.parentNode.rowIndex
-		currentSelectedTile = game.board[xpos][ypos]
+		currentlySelectedTile = game.board[xpos][ypos]
 
-		if (currentSelectedTile.piece != null && isThisPlayersTurn && playerOwnsPiece(isRedPlayer, currentSelectedTile.piece))	
+		if (currentlySelectedTile.piece != null && isThisPlayersTurn && playerOwnsPiece(isRedPlayer, currentlySelectedTile.piece))	
 		{
-			if (currentSelectedTile.piece.movement > 0)
+			if (currentlySelectedTile.piece.movement > 0)
 			{	
-				window.tilePieceIsPotentiallyMovingFrom = currentSelectedTile
+				window.tilePieceIsPotentiallyMovingFrom = currentlySelectedTile
 				enableAndShowButton($('#moveButton'))
 			}
 
-			if (currentSelectedTile.piece.energy < currentSelectedTile.piece.energyCapacity && playerEnergy > 0)
+			if (currentlySelectedTile.piece.power > 0)
 			{
-				window.piecePotentiallyBeingActivated = currentSelectedTile.piece
-				enableAndShowButton($('#activateButton'))
+				window.potentialAttacker = currentlySelectedTile.piece
+				enableAndShowButton($('#attackButton'))
+			}
+
+			if (currentlySelectedTile.piece.energy < currentlySelectedTile.piece.energyCapacity && playerEnergy > 0)
+			{
+				window.piecePotentiallyBeingActivated = currentlySelectedTile.piece
+				enableAndShowButton($('#energizeButton'))
 			}
 		}
 
 		if (moveMode)
 		{
-			if (tilesWhichCanCurrentlyBeMovedTo.includes(currentSelectedTile))
-				socket.emit('request to move a piece', tilePieceIsPotentiallyMovingFrom,  currentSelectedTile)
+			if (activeTiles.includes(currentlySelectedTile))
+				socket.emit('request to move a piece', tilePieceIsPotentiallyMovingFrom,  currentlySelectedTile)
 
-			resetTilesColorsAndAddHover(tilesWhichCanCurrentlyBeMovedTo)
+			resetTilesColorsAndAddHover(activeTiles)
 			moveMode = false;
 		}
 
 		else if (buildMode)
 		{
-			if (tilesWhichCanCurrentlyBeBuiltOn.includes(currentSelectedTile))
-				socket.emit('request to build a piece', currentInventoryPosition, currentSelectedTile)
+			if (activeTiles.includes(currentlySelectedTile))
+				socket.emit('request to build a piece', currentInventoryPosition, currentlySelectedTile)
 
 			buildMode = false			
-			resetTilesColorsAndAddHover(tilesWhichCanCurrentlyBeBuiltOn)
-			tilesWhichCanCurrentlyBeBuiltOn = []
+			resetTilesColorsAndAddHover(activeTiles)
 		}
 
-		updateDisplayerFromBoardClick(currentSelectedTile)
+		else if (attackMode)
+		{
+			if (activeTiles.includes(currentlySelectedTile))
+			{
+				if (currentlySelectedTile.piece != null && currentlySelectedTile.flatPiece != null)
+				{
+					enableAndShowButton($('#attackFlatPieceButton'))
+					enableAndShowButton($('#attackPieceButton'))
+				}
+
+				else
+					socket.emit('request to attack a piece', potentialAttacker,  currentlySelectedTile)
+			}
+		}
+
+		updateDisplayerFromBoardClick(currentlySelectedTile)
 	})
 
 	//button handlers
-	$('#activateButton').submit(function(e)
+	$('#energizeButton').submit(function(e)
 	{
 		disableAllButtons()
 		e.preventDefault()
-		socket.emit('request to energize', currentSelectedTile)
+		socket.emit('request to energize', currentlySelectedTile)
+	})
+
+	$('#endTurnButton').submit(function(e)
+	{
+		disableAllButtons()
+		e.preventDefault()
+		socket.emit('request to end turn')
 	})
 	
 	$('#buildButton').submit(function(e)
@@ -224,8 +263,9 @@ $(function ()
 		disableAllButtons()
 		e.preventDefault()
 		buildMode = true
-		populateTilesWhichCanCurrentlyBeBuiltOn(currentSelectedInventoryPiece)
-		highLightTilesGreenAndAddHover(tilesWhichCanCurrentlyBeBuiltOn)
+		var tilesWhichCanBeCurrentlyBuiltOn = getTilesWhichCanCurrentlyBeBuiltOnFromAllTiles(currentSelectedInventoryPiece)
+		highLightTilesGreenAndAddHover(tilesWhichCanBeCurrentlyBuiltOn)
+		activeTiles = tilesWhichCanBeCurrentlyBuiltOn
 	})
 
 	$('#moveButton').submit(function(e)
@@ -233,11 +273,50 @@ $(function ()
 		disableAllButtons()
 		e.preventDefault()
 		moveMode = true
-		getMoveableTilesFromTileForPieceOnTile(currentSelectedTile)
-		highLightTilesGreenAndAddHover(tilesWhichCanCurrentlyBeMovedTo)
+		var moveableTiles = getTilesWithoutABumpyPiece(getTilesWithinRangeOfTile(allTiles, currentlySelectedTile, currentlySelectedTile.piece.movement))
+		highLightTilesGreenAndAddHover(moveableTiles)
+		activeTiles = moveableTiles
 	})
 	
 	$('#buyButton').submit(function(e)
+	{
+		e.preventDefault()
+		disableAllButtons()
+		socket.emit('request piece purchase', currentlySelectedStorePiece)
+    })
+
+	$('#activateButton').submit(function(e)
+	{
+		e.preventDefault()
+		disableAllButtons()
+
+    })
+
+	$('#attackButton').submit(function(e)
+	{
+		disableAllButtons()
+		e.preventDefault()
+		attackMode = true
+		var attackableTiles = getTilesWithAnyPiece(getTilesWithinRangeOfTile(allTiles, currentlySelectedTile, currentlySelectedTile.piece.attackRange))
+		highLightTilesGreenAndAddHover(attackableTiles)
+		activeTiles = attackableTiles
+    })
+
+	$('#attackPieceButton').submit(function(e)
+	{
+		disableAllButtons()
+		e.preventDefault()
+		socket.emit('request to attack a piece', potentialAttacker,  currentlySelectedTile, false)
+    })
+
+	$('#attackFlatPieceButton').submit(function(e)
+	{
+		disableAllButtons()
+		e.preventDefault()
+		socket.emit('request to attack a piece', potentialAttacker,  currentlySelectedTile, true)
+    })
+
+	$('#castButton').submit(function(e)
 	{
 		e.preventDefault()
 		disableAllButtons()
@@ -300,80 +379,121 @@ function playerOwnsPiece(isRedPlayer, piece)
 	return (isRedPlayer && piece.owner == "Red") || (!isRedPlayer && piece.owner == "Blue")
 }
 
-function addBuildableTilesFromRowStartToRowEnd(rowStart, rowEnd, col)
+function getTilesFromRowStartToRowEndInCol(rowStart, rowEnd, col)
 {
+	var newTiles = []
 	while (rowStart < rowEnd)
 	{
-		var tile = game.board[col][rowStart]
-		if (tile.piece == null && tile.flatPiece == null)
-		{
-			tilesWhichCanCurrentlyBeBuiltOn.push(tile)
-		}
+		newTiles.push(game.board[col][rowStart])
 		rowStart += 1
 	}
+	return newTiles
 }
 
-function getMoveableTilesFromTileForPieceOnTile(tile)
+function getTilesWhichCanCurrentlyBeBuiltOnFromAllTiles(piece)
 {
-	tilesWhichCanCurrentlyBeMovedTo = []
-	addMoveableTilesFromTileForPieceOnTileHelper(tile, piece.movement)
-	tilesWhichCanCurrentlyBeMovedTo = tilesWhichCanCurrentlyBeMovedTo.filter(onlyUnique)
-}
-
-function onlyUnique(value, index, self) { 
-    return self.indexOf(value) === index;
-}
-
-function addMoveableTilesFromTileForPieceOnTileHelper(tile, movementLeft)
-{
-	if (movementLeft == 0)
-		return
-
-	adjacentTiles = getAdjacentTiles(tile)
-	for (adjacentTile of adjacentTiles)
-	{
-		if (tileCanBeMovedOnTo(adjacentTile))
-		{
-			tilesWhichCanCurrentlyBeMovedTo.push(adjacentTile)
-			addMoveableTilesFromTileForPieceOnTileHelper(adjacentTile, movementLeft-1)
-		}
-	}
-}
-
-function populateTilesWhichCanCurrentlyBeBuiltOn(piece)
-{
-	tilesWhichCanCurrentlyBeBuiltOn = []
+	var tilesWhichCanCurrentlyBeBuiltOn = []
 	for (var col = 0; col < 9; col++)
 	{
 		if(piece.buildableZones.includes("Friendly"))
 		{
 			if (isRedPlayer)
-			{
-				addBuildableTilesFromRowStartToRowEnd(0, 3, col)
-			}
+				tilesWhichCanCurrentlyBeBuiltOn = tilesWhichCanCurrentlyBeBuiltOn.concat(getTilesFromRowStartToRowEndInCol(0, 3, col))
 			else
-			{
-				addBuildableTilesFromRowStartToRowEnd(6, 9, col)
-			}		
+				tilesWhichCanCurrentlyBeBuiltOn = tilesWhichCanCurrentlyBeBuiltOn.concat(getTilesFromRowStartToRowEndInCol(6, 9, col))
 		}
 
 		if(piece.buildableZones.includes("Neutral"))
-		{
-			addBuildableTilesFromRowStartToRowEnd(3, 6, col)
-		}
+			tilesWhichCanCurrentlyBeBuiltOn = tilesWhichCanCurrentlyBeBuiltOn.concat(getTilesFromRowStartToRowEndInCol(3, 6, col))
 
 		if(piece.buildableZones.includes("Enemy"))
 		{
 			if (!isRedPlayer)
-			{
-				addBuildableTilesFromRowStartToRowEnd(0, 3, col)
-			}
+				tilesWhichCanCurrentlyBeBuiltOn = tilesWhichCanCurrentlyBeBuiltOn.concat(getTilesFromRowStartToRowEndInCol(0, 3, col))
 			else
-			{
-				addBuildableTilesFromRowStartToRowEnd(6, 9, col)
-			}		
+				tilesWhichCanCurrentlyBeBuiltOn = tilesWhichCanCurrentlyBeBuiltOn.concat(getTilesFromRowStartToRowEndInCol(6, 9, col))
 		}
 	}
+	tilesWhichCanCurrentlyBeBuiltOn = getTilesWithoutAnyPiece(tilesWhichCanCurrentlyBeBuiltOn)
+	return tilesWhichCanCurrentlyBeBuiltOn
+}
+
+function getTilesWithoutAnyPiece(tiles)
+{
+	var newTiles = []
+	for (tile of tiles)
+		if (tile.piece == null && tile.flatPiece == null)
+			newTiles.push(tile)
+	return newTiles 
+}
+
+function getTilesWithAnyPiece(tiles)
+{
+	var newTiles = []
+	for (tile of tiles)
+		if (tile.piece != null || tile.flatPiece != null)
+			newTiles.push(tile)
+	return newTiles 	
+}
+
+function getTilesWithinRangeOfTile(tiles, centerTile, range)
+{
+	var newTiles = []
+	for (tile of tiles)
+		if (getDistanceBetweenTwoTiles(tile, centerTile) <= range)
+			newTiles.push(tile)
+	return newTiles
+}
+
+function getDistanceBetweenTwoTiles(tile1, tile2)
+{
+	return Math.abs(tile1.col - tile2.col) + Math.abs(tile1.row-tile2.row)
+}
+
+function getTilesWithoutABumpyPiece(tiles)
+{
+	var newTiles = []
+	for (tile of tiles)
+		if (tile.piece == null)
+			newTiles.push(tile)
+	return newTiles 
+}
+
+function getTilesWithAFriendlyPiece(isRedPlayer, tiles)
+{
+	if (isRedPlayer)
+		var friendlyOwner = 'Red'
+	else
+		var friendlyOwner = 'Blue'
+
+	var newTiles = []
+	for (tile of tiles)
+		if (tile.piece != null && tile.piece.owner == friendlyOwner)
+				newTiles.push(tile)
+	return newTiles
+}	
+
+function getTilesWithAnEnemyPiece(isRedPlayer, tiles)
+{
+	if (isRedPlayer)
+		var enemyOwner = 'Blue'
+	else
+		var enemyOwner = 'Red'
+
+	var newTiles = []
+	for (tile of tiles)
+		if (tile.piece != null && tile.piece.owner == enemyOwner)
+				newTiles.push(tile)
+	return newTiles
+}
+
+function getTilesWithStatus(tiles, status)
+{
+	var newTiles = []
+	for (tile of tiles)
+		if (tile.status == status)
+			newTiles.push(tile)
+	return newTiles 
 }
 
 function getAdjacentTiles(tile)
@@ -521,7 +641,13 @@ function disableAllButtons()
 	disableAndHideButton($('#buyButton'))
 	disableAndHideButton($('#buildButton'))
 	disableAndHideButton($('#moveButton'))
+	disableAndHideButton($('#energizeButton'))
+	disableAndHideButton($('#endTurnButton'))
 	disableAndHideButton($('#activateButton'))
+	disableAndHideButton($('#castButton'))
+	disableAndHideButton($('#attackButton'))
+	disableAndHideButton($('#attackPieceButton'))
+	disableAndHideButton($('#attackFlatPieceButton'))
 }
 
 function updateLog(text){

@@ -1,13 +1,9 @@
 fix cookie, name problems.. need to use chrome still?
 
-change "activation" to "energize"?
-
-client has to make buy, move, attack requests, change game state after server responds
-
-add log updates for everything
-
 overall styling for game
 
+check:
+	is there a winner (decide win conditions)?
 
 0, 0            9, 0
 

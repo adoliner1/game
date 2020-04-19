@@ -63,6 +63,76 @@ io.on('connection', function(socket)
     }
   })
 
+  socket.on('request to end turn', function()
+  {
+    var game = findGameFromSocketID(socket.id)
+
+    if (game == null)
+    {
+      io.to(socket.id).emit("new log message", "No such game")
+      return
+    }
+
+    var isRedPlayer = findIfPlayerIsRedPlayerInGameFromSocketID(game, socket.id)
+    var player = (isRedPlayer) ? game.redPlayer : game.bluePlayer
+
+    if (!findIfItsAPlayersTurnInGame(isRedPlayer, game))
+    {
+      io.to(socket.id).emit("new log message", "Not your turn")
+      return  
+    }
+
+    game.isRedPlayersTurn = !game.isRedPlayersTurn  
+
+    io.to(game.Host).emit('player ended their turn')     
+  })
+
+ socket.on('request to attack a piece', function(attacker, tile, isAttackingFlatPiece)
+  {
+    var game = findGameFromSocketID(socket.id)
+    var tileBeingAttacked = game.board[tile.col][tile.row]
+
+    if (game == null)
+    {
+      io.to(socket.id).emit("new log message", "No such game")
+      return
+    }
+
+    var isRedPlayer = findIfPlayerIsRedPlayerInGameFromSocketID(game, socket.id)
+    var player = (isRedPlayer) ? game.redPlayer : game.bluePlayer
+
+    if (!findIfItsAPlayersTurnInGame(isRedPlayer, game))
+    {
+      io.to(socket.id).emit("new log message", "Not your turn")
+      return  
+    }
+
+    if (!findIfAPlayerOwnsAPiece(isRedPlayer, attacker))
+    {
+      io.to(socket.id).emit("new log message", "You don't own that piece!")
+      return        
+    }
+
+    //TODO: check if attack is in range
+
+    if (isAttackingFlatPiece)
+      var attackee = tileBeingAttacked.flatPiece
+    else
+      var attackee = tileBeingAttacked.piece
+
+    attackee.health -= attacker.power
+
+    if (attackee.health <= 0)
+    {
+      if (isAttackingFlatPiece)
+        tileBeingAttacked.flatPiece = null
+      else
+        tileBeingAttacked.piece = null
+    }
+
+    io.to(game.Host).emit('player attacked a piece', attacker, tileBeingAttacked, isAttackingFlatPiece)     
+  })
+
   socket.on('request to energize', function(energizeT)
   {
     var game = findGameFromSocketID(socket.id)
@@ -147,7 +217,7 @@ io.on('connection', function(socket)
     toTile.piece = fromTile.piece
     fromTile.piece = null
 
-    var distanceMoved = Math.abs(fromTile.col-toTile.col) + Math.abs(fromTile.row-toTile.row)
+    var distanceMoved = getDistanceBetweenTwoTiles(fromTile, toTile)
     toTile.piece.movement -= distanceMoved 
 
     io.to(game.Host).emit('player moved a piece', fromTile, toTile)     
@@ -585,4 +655,9 @@ function addBuildableTilesFromRowStartToRowEnd(rowStart, rowEnd, col, board, til
     }
     rowStart += 1
   }
+}
+
+function getDistanceBetweenTwoTiles(tile1, tile2)
+{
+  return Math.abs(tile1.col - tile2.col) + Math.abs(tile1.row-tile2.row)
 }

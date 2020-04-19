@@ -1,7 +1,7 @@
 var units = []
 var buildings = []
 
-function Unit(name, owner, boardAvatar, Types, buildableZones, cost, power, movementCapacity, energyCapacity, health) {
+function Unit(name, owner, boardAvatar, Types, buildableZones, cost, power, movementCapacity, energyCapacity, health, attackRange, powerCapacity) {
   this.Name = name;
   this.owner = owner;
   this.boardAvatar = boardAvatar;
@@ -9,11 +9,13 @@ function Unit(name, owner, boardAvatar, Types, buildableZones, cost, power, move
   this.buildableZones = buildableZones
   this.cost = cost;
   this.power = power
+  this.powerCapacity = powerCapacity
   this.movement = 2
   this.movementCapacity = movementCapacity
   this.energy = 0
   this.energyCapacity = energyCapacity
   this.health = health
+  this.attackRange = attackRange
 }
 
 function Building(name, owner, boardAvatar, Types, buildableZones, cost, health, pointValue, coinProduction, energyCapacity, isFlat) {
@@ -35,8 +37,8 @@ function Spell()
 {}
 
 //units
-var footman = new Unit("Footman", "", "FM", ["Unit"], ["Friendly"], 3, 1, 0, 2, 1, 1)
-var builder = new Unit("Builder", "", "BU", ["Unit", "Builder"], ["Friendly"], 3, 0, 1, 1, 1)
+var footman = new Unit("Footman", "", "FM", ["Unit"], ["Friendly"], 3, 1, 0, 2, 1, 1, 1)
+var builder = new Unit("Builder", "", "BU", ["Unit", "Builder"], ["Friendly"], 3, 0, 1, 1, 1, 0)
 
 //buildings
 //resources
