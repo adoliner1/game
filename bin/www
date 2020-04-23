@@ -63,6 +63,65 @@ io.on('connection', function(socket)
     }
   })
 
+  socket.on('request tiles which can be built on', function(inventoryPosition)
+  {
+    var game = findGameFromSocketID(socket.id)
+
+    if (game == null)
+    {
+      io.to(socket.id).emit("new log message", "No such game")
+      return
+    }
+
+    var isRedPlayer = findIfPlayerIsRedPlayerInGameFromSocketID(game, socket.id)
+    var player = (isRedPlayer) ? game.redPlayer : game.bluePlayer
+
+    if (!findIfItsAPlayersTurnInGame(isRedPlayer, game))
+    {
+      io.to(socket.id).emit("new log message", "Not your turn")
+      return  
+    }
+
+    gamePiece = player.inventory[inventoryPosition]
+
+    var buildableTiles = gamePiece.getTilesWhichCanBeBuiltOn(game)
+    io.to(socket.id).emit('new active tiles', buildableTiles) 
+
+  })
+
+  socket.on('request tiles which can be moved to', function(tile)
+  {
+    var game = findGameFromSocketID(socket.id)
+    var gameTile = game.board[tile.col][tile.row]
+    var gamePiece = gameTile.piece
+
+    if (game == null)
+    {
+      io.to(socket.id).emit("new log message", "No such game")
+      return
+    }
+
+    var isRedPlayer = findIfPlayerIsRedPlayerInGameFromSocketID(game, socket.id)
+    var player = (isRedPlayer) ? game.redPlayer : game.bluePlayer
+
+    if (!findIfItsAPlayersTurnInGame(isRedPlayer, game))
+    {
+      io.to(socket.id).emit("new log message", "Not your turn")
+      return  
+    }
+
+    if (!findIfAPlayerOwnsAPiece(isRedPlayer, gameTile.piece))
+    {
+      io.to(socket.id).emit("new log message", "You don't own that piece!")
+      return        
+    }
+
+
+    var moveableTiles = gamePiece.getTilesWhichCanBeMovedTo(game, gameTile)
+    io.to(socket.id).emit('new active tiles', moveableTiles) 
+
+  })
+
   socket.on('request to end turn', function()
   {
     var game = findGameFromSocketID(socket.id)
@@ -121,7 +180,7 @@ io.on('connection', function(socket)
       var attackee = tileBeingAttacked.piece
 
     attackee.health -= attacker.power
-
+  
     if (attackee.health <= 0)
     {
       if (isAttackingFlatPiece)
@@ -223,7 +282,7 @@ io.on('connection', function(socket)
     io.to(game.Host).emit('player moved a piece', fromTile, toTile)     
   })
 
-  socket.on('request piece purchase', function(piece)
+  socket.on('request piece purchase', function(clientPiece)
   {
     var game = findGameFromSocketID(socket.id)
 
@@ -231,6 +290,17 @@ io.on('connection', function(socket)
     {
       io.to(socket.id).emit("new log message", "No such game")
       return
+    }
+
+    console.log(clientPiece)
+    console.log(game.units)
+
+    var piece = game.units[clientPiece.name]
+
+    if (piece == null)
+    {
+      io.to(socket.id).emit("new log message", "Piece not in game")
+      return      
     }
 
     var isRedPlayer = findIfPlayerIsRedPlayerInGameFromSocketID(game, socket.id)
@@ -268,6 +338,7 @@ io.on('connection', function(socket)
           break
         }
     }
+
     io.to(game.Host).emit('player bought a piece', isRedPlayer, player.inventory, player.gold) 
   })
 
@@ -324,6 +395,9 @@ io.on('connection', function(socket)
     else
     {
       var board = new Array(9);
+      var allTiles = []
+      var redFriendlyTiles = []
+      var blueFriendlyTiles = []
       for (var col = 0; col < board.length; col++)
       {
         board[col] = new Array(9);
@@ -331,14 +405,19 @@ io.on('connection', function(socket)
         {
           var tile = {piece: null, flatPiece: null, statuses: "Empty", DOMObject: null, row: row, col: col}
           board[col][row] = tile
+
+          allTiles.push(tile)
+          if (row < 3)
+            redFriendlyTiles.push(tile)
+          else if (row > 5)
+            blueFriendlyTiles.push(tile)
         }
       }
 
       //add to pieces.js
-
-      var moneyPlatform = {Name: "Money Platform", platformType: "Money", owner: null, boardAvatar: "MP", isFlat: true}
-      var victoryPointPlatform = {Name: "Victory Platform", platformType: "Victory", owner: null, boardAvatar: "VP", isFlat: true}
-      var energyPlatform = {Name: "Energy Platform", platformType: "Energy", owner: null, boardAvatar: "EP", isFlat: true}
+      var moneyPlatform = {name: "Money Platform", types: ["Platform"],  platformType: "Money", owner: null, boardAvatar: "MP", isFlat: true}
+      var victoryPointPlatform = {name: "Victory Platform", types: ["Platform"], platformType: "Victory", owner: null, boardAvatar: "VP", isFlat: true}
+      var energyPlatform = {name: "Energy Platform", types: ["Platform"], platformType: "Energy", owner: null, boardAvatar: "EP", isFlat: true}
 
       //set platforms
       board[1][3].flatPiece = moneyPlatform
@@ -353,6 +432,9 @@ io.on('connection', function(socket)
         redPlayer: {socketID: null, Name: name, gold: 20, score: 0, energy: 2, inventory: Array(5)},
         bluePlayer: {socketID: null, Name: host, gold: 20, score: 0, energy: 2, inventory: Array(5)},
         board: board,
+        allTiles: allTiles,
+        redFriendlyTiles: redFriendlyTiles,
+        blueFriendlyTiles: blueFriendlyTiles,
         buildings: pieces.buildings,
         units: pieces.units,
         isRedPlayersTurn: true

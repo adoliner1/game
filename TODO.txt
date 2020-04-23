@@ -1,13 +1,3 @@
 fix cookie, name problems.. need to use chrome still?
 
 overall styling for game
-
-check:
-	is there a winner (decide win conditions)?
-
-0, 0            9, 0
-
-
-
-
-0, 9            9, 9

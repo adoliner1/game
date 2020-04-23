@@ -30,12 +30,20 @@ $(function ()
 		updateLog(message)
 	})
 
+	socket.on('new active tiles', function(tiles)
+	{
+		activeTiles = getClientTilesFromServertiles(tiles)
+		highLightTilesGreenAndAddHover(activeTiles)
+	})
+
 	socket.on('new game data', function(newGame)
 	{
 		//global game variable
 		window.game = newGame
 
 		attachDOMTilesToBoardTiles()
+		game.buildings = convertDictionaryToList(game.buildings)
+		game.units = convertDictionaryToList(game.units)
 		addPiecesToShop(game.buildings)
 		addPiecesToShop(game.units)
 		addStoreClickHandler()
@@ -263,9 +271,7 @@ $(function ()
 		disableAllButtons()
 		e.preventDefault()
 		buildMode = true
-		var tilesWhichCanBeCurrentlyBuiltOn = getTilesWhichCanCurrentlyBeBuiltOnFromAllTiles(currentSelectedInventoryPiece)
-		highLightTilesGreenAndAddHover(tilesWhichCanBeCurrentlyBuiltOn)
-		activeTiles = tilesWhichCanBeCurrentlyBuiltOn
+		socket.emit('request tiles which can be built on', currentInventoryPosition)
 	})
 
 	$('#moveButton').submit(function(e)
@@ -273,9 +279,7 @@ $(function ()
 		disableAllButtons()
 		e.preventDefault()
 		moveMode = true
-		var moveableTiles = getTilesWithoutABumpyPiece(getTilesWithinRangeOfTile(allTiles, currentlySelectedTile, currentlySelectedTile.piece.movement))
-		highLightTilesGreenAndAddHover(moveableTiles)
-		activeTiles = moveableTiles
+		socket.emit('request tiles which can be moved to', currentlySelectedTile)
 	})
 	
 	$('#buyButton').submit(function(e)
@@ -418,6 +422,25 @@ function getTilesWhichCanCurrentlyBeBuiltOnFromAllTiles(piece)
 	return tilesWhichCanCurrentlyBeBuiltOn
 }
 
+function convertDictionaryToList(dict)
+{
+	var newList = []
+	for (key in dict)
+	{
+		if (dict.hasOwnProperty(key))
+  			newList.push(dict[key])
+	}
+	return newList
+}
+
+function getClientTilesFromServertiles(tiles)
+{
+	var newTiles = []
+	for (tile of tiles)
+		newTiles.push(game.board[tile.col][tile.row])
+	return newTiles
+}
+
 function getTilesWithoutAnyPiece(tiles)
 {
 	var newTiles = []
@@ -534,7 +557,7 @@ function attachDOMTilesToBoardTiles()
 
 function addPieceToTile(piece, tile)
 {
-	updateLog("Adding " + piece.Name + " to board at " + "(" + tile.col + "," + tile.row + ")")
+	updateLog("Adding " + piece.name + " to board at " + "(" + tile.col + "," + tile.row + ")")
 	if (piece.isFlat)
 	{
 		tile.flatPiece = piece
@@ -549,7 +572,7 @@ function addPieceToTile(piece, tile)
 
 function removePieceFromTile(tile)
 {
-  updateLog("Removing " + tile.piece.Name + " from board at " + "(" + tile.col + "," + tile.row + ")")
+  updateLog("Removing " + tile.piece.name + " from board at " + "(" + tile.col + "," + tile.row + ")")
   tile.piece = null
   tile.DOMObject.children(".piece").html("") 
 }
@@ -558,11 +581,11 @@ function addPiecesToShop(piecesList)
 {
 	for (piece of piecesList)
 	{
-		if (piece.Types.includes('Building'))
+		if (piece.types.includes('Building'))
 		{
 			newCell = $("#buildings tr").append('<td>' + piece.boardAvatar + '</td>');
 		}
-		else if (piece.Types.includes('Unit'))
+		else if (piece.types.includes('Unit'))
 		{
 			newCell = $("#units tr").append('<td>' + piece.boardAvatar + '</td>');
 		}  
@@ -582,15 +605,16 @@ function enableAndShowButton(button)
 }
 
 function updateDisplayerFromShopOrInventory(piece){
+
 	if(piece != null)
 	{
 		$('#displayerFlatPieceName').html("")
 		$('#displayerFlatPieceHealth').html("")
 		$('#displayerTileStatuses').html("")
-		$('#displayerPieceName').html("Name: " + piece.Name)
-		$('#displayerPieceType').html("Type: " + piece.Type)
-		$('#displayerPieceMovement').html("Movement: " + piece.movement)
-		$('#displayerPieceAttack').html("Attack: " + piece.attack)
+		$('#displayerPieceName').html("Name: " + piece.name)
+		$('#displayerPieceType').html("Types: " + piece.types)
+		$('#displayerPieceMovement').html("Movement: " + piece.movementDisplay)
+		$('#displayerPieceAttack').html("Power: " + piece.powerDisplay)
 		$('#displayerPieceHealth').html("Health: " + piece.health)
 	}
 	else
@@ -606,12 +630,12 @@ function updateDisplayerFromBoardClick(tile){
 
 	if(tile.piece != null)
 	{
-		$('#displayerPieceName').html("Name: " + tile.piece.Name)
-		$('#displayerPieceType').html("Type: " + tile.piece.Type)
-		$('#displayerPieceMovement').html("Movement: " + tile.piece.movement)
-		$('#displayerPieceAttack').html("Attack: " + tile.piece.attack)
+		$('#displayerPieceName').html("Name: " + tile.piece.name)
+		$('#displayerPieceType').html("Types: " + tile.piece.type)
+		$('#displayerPieceMovement').html("Movement: " + tile.piece.movementDisplay)
+		$('#displayerPiecePower').html("Power: " + tile.piece.powerDisplay)
 		$('#displayerPieceHealth').html("Health: " + tile.piece.health)
-		$('#displayerPieceEnergy').html("Energy: " + tile.piece.energy)
+		$('#displayerPieceEnergy').html("Energy: " + tile.piece.energy + "/" + tile.piece.energyCapacity)
 	}
 
 	if(tile.flatPiece != null)
@@ -629,7 +653,7 @@ function emptyDisplayerValues()
 	$('#displayerPieceName').html("")
 	$('#displayerPieceType').html("")
 	$('#displayerPieceMovement').html("")
-	$('#displayerPieceAttack').html("")
+	$('#displayerPiecePower').html("")
 	$('#displayerPieceHealth').html("")
 	$('#displayerPieceEnergy').html("")
 	$('#displayerFlatPieceName').html("")
@@ -665,4 +689,4 @@ function readCookie(name) {
             return decodeURIComponent(c.substring(nameEQ.length, c.length));
     }
     return null;
-}
+} 
