@@ -3,51 +3,46 @@ body {font: 13px Helvetica, Arial; height: 100%;}
 html {height: 100%;}
 td:hover {background-color: #FFFFE0;}
 
-#boardAndInventoriesAndNavBar {border: 2px dotted #000000; top: 0px; height: 100%; width: 50%; float: left}
-#boardAndInventories {; position: absolute; top: 10%; left: 5px; height: 75%; width: 45%;}
-#board {position: relative; top: 80px; left: 23%;}
-#board td {position: relative; border: 1px solid #606060; padding: 16px; height: 50px; width: 50px;}
+#boardAndInventoriesAndNavBar {position: absolute; border: 2px dotted #cccc00; right: 40%; height: 100%; width: 60%; padding: 5px}
+#boardAndInventories {position: absolute; border: 2px dotted #000000; top: 5%; bottom: 5%; left: 5%; right: 5%;  height: 90%; width: 90%;}
+#board {position: absolute; top: 25%; left: 25%; height: 50%; width: 50%;}
+#board td {position: relative; border: 1px solid #606060; padding: 16px;}
 
 .flatPiece {position: absolute; right: 4px; bottom: 15px;} 
 .piece {position: absolute; left: 4px; bottom: 15px;}  
 
-#blueInventory {position: absolute; left: 450px; top: 580px; height: 40px; width: 250px;}
-#blueInventory td {border: 1px solid #0000b3; padding: 16px; height: 40px; width: 40px;}
+#blueInventory {position: absolute; border: 1px solid #0000b3; left: 55%; top: 80%; width: 10%; height: 5%;}
+#blueInventory td {position: relative; border: 1px solid #0000b3; padding: 16px;}
 
-#redInventory {position: absolute; left: 450px; top: 0px; height: 40px; width: 250px;}
-#redInventory td {border: 1px solid #cc0000; padding: 16px; height: 40px; width: 40px;}
+#redInventory {position: absolute; border: 1px solid #cc0000; left: 55%; top: 15%; width: 10%; height: 5%;}
+#redInventory td {position: relative; border: 1px solid #cc0000; padding: 16px;}
 
-#bluePlayerResources {position: absolute; border: 1px solid #0000b3; height: 40px; width: 200px; top: 582px; left: 225px;}
-#redPlayerResources {position: absolute; border: 1px solid #cc0000; height: 40px; width: 200px; top: 2px; left: 225px;}
-.gold {position: absolute; left: 30px}
-.energy {position: absolute; left: 90px}
-.vp {position: absolute; left: 150px}
+#bluePlayerResources {position: absolute; border: 1px solid #0000b3; top: 80%; left: 40%;}
+#redPlayerResources {position: absolute; border: 1px solid #cc0000; top: 15%; left: 40%;}
 
-#displayerAndShopAndLogSection {border: 2px dotted #000000; height: 100%; width: 40%; float: left}
+.gold {padding: 2px;}
+.energy {padding: 2px}
+.vp {padding: 2px}
 
-#displayer {border: 2px solid #000000; height: 135px; width: 300px; position: relative; left: 0px; top: 0px;}
-#pieceDisplayer {position: relative; top: 0px;}
-#tileDisplayer {position: relative;}
+#buttons {position: absolute; border: 2px solid #000000; left: 80%; top: 45%;}
+#buttons form {position: relative; padding: 5px}	
 
-#buttons {height: 25px; width: 100px; position: relative; left: 20px; top: 125px;}
-#buttons form {float: left; padding: 20px}
+#displayerAndShopAndButtonsAndLogSection {position: absolute; border: 2px dotted #000000; height: 100%; width: 40%; left: 60%;}
 
-/**
-#buyButton {position: relative; top: 230px; right: 675px;}
-#buildButton {position: absolute; top: 250px; right: 675px;}
-#moveButton {position: absolute; top: 270px; right: 675px;}
-#energizeButton {position: absolute; top: 290px; right: 675px;}
-#attackButton {position: absolute; top: 330px; right: 675px;}
-#activateButton {position: absolute; top: 370px; right: 675px;}
-#castButton {position: absolute; top: 410px; right: 675px;}
-#endTurnButton {position: absolute; top: 450px; right: 675px;}
-*/
+#displayer {border: 2px solid #000000; position: absolute; height: 50%; width: 100%;}
+
+#pieceProperties {list-style-type: none; border: 2px solid #000000; height: 50%; width: 100%; top: 0%; position: absolute; overflow: scroll;}
+#pieceProperties li { padding: 5px 10px; width: 100%;}
+#flatPieceProperties {list-style-type: none; border: 2px solid #000000; height: 30%; width: 100%; top: 50%; position: absolute; overflow: scroll;}
+#flatPieceProperties li { padding: 5px 10px; width: 100%;}
+#tileProperties {list-style-type: none; border: 2px solid #000000; height: 20%; width: 100%; top: 80%; position: absolute; overflow: scroll;}
+#tileProperties li { padding: 5px 10px; width: 100%;}
 
 
-#log {list-style-type: none; border: 2px solid #000000; height: 300px; width: 100%; position: relative; top: 350px; overflow: scroll;}
-#log li { padding: 5px 10px; width: 100%;}
-
-#stores {padding: 16px; position: relative; top: 250px;}
+#stores {padding: 16px; border: 2px solid #000000; position: absolute; top: 50%; width: 100%; height: 25%;}
 #buildings td {border: 1px solid #6b6b47; padding: 16px; height: 40px; width: 40px;}
 #units td {border: 1px solid #000080; padding: 16px; height: 40px; width: 40px;}
 #spells td {border: 1px solid #8f246b; padding: 16px; height: 40px; width: 40px;}
+
+#log {list-style-type: none; border: 2px solid #000000; height: 25%; width: 100%; position: absolute; top: 75%; overflow: scroll;}
+#log li { padding: 5px 10px; width: 100%;}

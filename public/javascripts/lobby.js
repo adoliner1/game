@@ -1,26 +1,28 @@
 $(function () {
   var socket = io();
 
-  $('form[name="sendChat"]').submit(function(e){
-    e.preventDefault(); // prevents page reloading
+  $('form[name="sendChat"]').submit(function(e)
+  {
+    e.preventDefault();
     message = $('#m').val()
     var messageWords = message.split(" ");
-    if (messageWords[0] == "/w"){
+    if (messageWords[0] == "/w")
+    {
       recipientName = messageWords[1]
-      for (var i = 2; i < messageWords.length; i++){
+      for (var i = 2; i < messageWords.length; i++)
         message = messageWords[i] + " "
-      }
       socket.emit('private message', {msg: message, recip: recipientName})
     }
-    else{
+
+    else
       socket.emit('chat message', message);
-    }
     $('#m').val('');
     socket.emit('user stopped typing');
     return false;
   });
 
-  $('form[name="setNickName"]').submit(function(e){
+  $('form[name="setNickName"]').submit(function(e)
+  {
     e.preventDefault(); // prevents page reloading
     nickName = $('#a').val()
     if (nickName == "")
@@ -34,19 +36,18 @@ $(function () {
     return false;
   });
 
-  $('input[id="m"]').keyup(function(e){
-    if (e.which === 13){
+  $('input[id="m"]').keyup(function(e)
+  {
+    if(e.which === 13)
       socket.emit('user stopped typing');
-    }
-    else if ($('#m').val() !== ''){
+    else if ($('#m').val() !== '')
       socket.emit('user is typing')
-    }
-    else{ 
+    else
       socket.emit('user stopped typing');
-    }
   });
 
-  socket.on('online users update', function(onlineUsersList){
+  socket.on('online users update', function(onlineUsersList)
+  {
     renderOnlineUsersList(onlineUsersList)
   });
 
@@ -56,16 +57,18 @@ $(function () {
       socket.emit('make game in lobby');
   });
 
-  socket.on('game made', function(game){
+  socket.on('game made', function(game)
+  {
     table = $('#gameListTable')[0];
-    var newButton = $('<td><button>Join Game</button></td>').click(function(){
-      socket.emit('user trying to join game in lobby', game.Host)
-     });
+    var newButton = $('<td><button>Join Game</button></td>').click(function()
+    {
+      socket.emit('user trying to join game in lobby', game.host)
+    });
     newRow = table.insertRow(-1)
     var hostNameCell = newRow.insertCell()
     var redPlayerCell = newRow.insertCell()
     $("#gameListTable tr:last").append(newButton);
-    hostNameCell.innerHTML = game.Host
+    hostNameCell.innerHTML = game.host
     redPlayerCell.innerHTML = game.redPlayer
   });
 
@@ -73,7 +76,8 @@ $(function () {
     window.location.href = "http://localhost:3000/game/" + host;
   });
 
-  socket.on('user is typing', function(typingUsers){
+  socket.on('user is typing', function(typingUsers)
+  {
     if(typingUsers.length == 1){
       $('p[name=userIsTypingBox').html(typingUsers[0] + ' is typing');  
     }
@@ -83,7 +87,8 @@ $(function () {
     }
   });
 
-  socket.on('user stopped typing', function(typingUsers){
+  socket.on('user stopped typing', function(typingUsers)
+  {
     if(typingUsers.length == 1){
       $('p[name=userIsTypingBox').html(typingUsers[0] + ' is typing');  
     }
@@ -96,7 +101,8 @@ $(function () {
     }
   });
 
-  socket.on('chat message', function(msg){
+  socket.on('chat message', function(msg)
+  {
     $('#messages').append($('<li>').text(msg));
   });
 });

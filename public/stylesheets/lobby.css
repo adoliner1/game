@@ -2,14 +2,15 @@
 
 body { font: 13px Helvetica, Arial; }
 
-#gameListTableDIV {border: solid; position: fixed; left: 2%; top: 200px; width: 60%; height: 200px; overflow: scroll;}
-#gameListTable {position: relative; width: 100%; height: 100%; border-collapse: separate; }
+#gameListTableDIV {position: absolute; border: solid; left: 2%; top: 200px; width: 60%; height: 200px; overflow: scroll;}
 
-#gameListTable tr:first-child{position:absolute; top: 0px;}
-#gameListTable td {width: 200px;}
-#gameListTable th {width: 200px;}
+#gameListTable {position: absolute; height: 100%;}
+#gameListTable body {position: absolute; height: 100%;}
+#gameListTable tr:first-child{position:absolute;}
+#gameListTable td {padding: 25px;}
+#gameListTable th {position: relative; top: 0px; padding: 25px;}
 
-#messagesBox {position: fixed; left: 2%; top: 450px; border: solid; width:60%; height: 200px; overflow: scroll;}
+#messagesBox {position: fixed; left: 2%; top: 600px; border: solid; width:60%; height: 200px; overflow: scroll;}
 #messages { list-style-type: none; margin: 0; padding: 0; width:100%; position: relative;}
 
 #messages li { padding: 5px 10px; width: 100%;}

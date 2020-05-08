@@ -10,6 +10,29 @@ html
   body
     section(id='boardAndInventoriesAndNavBar')
       section(id='boardAndInventories')
+        section(id='buttons')
+          form(id='endActionPhaseButton' action='')
+            button End Action Phase         
+          form(id='buyButton' action='')
+            button Buy
+          form(id='moveButton' action='')
+            button Move
+          form(id='buildButton' action='')
+            button Build
+          form(id='energizeButton' action='')
+            button Energize
+          form(id='endTurnButton' action='')
+            button End Turn
+          form(id='attackButton' action='')
+            button Attack
+          form(id='attackPieceButton' action='')
+            button Attack Piece
+          form(id='attackFlatPieceButton' action='')
+            button Attack Flat Piece                    
+          form(id='activateButton' action='')
+            button Activate
+          form(id='castButton' action='')
+            button Cast
         table(id='board')
           tr
             td(class='tile')
@@ -39,6 +62,62 @@ html
             td(class='tile')
               p(class='piece')
               p(class='flatPiece')
+          tr
+            td(class='tile')
+              p(class='piece')
+              p(class='flatPiece')
+            td(class='tile')
+              p(class='piece')
+              p(class='flatPiece')
+            td(class='tile')
+              p(class='piece')
+              p(class='flatPiece')
+            td(class='tile')
+              p(class='piece')
+              p(class='flatPiece')
+            td(class='tile')
+              p(class='piece')
+              p(class='flatPiece')
+            td(class='tile')
+              p(class='piece')
+              p(class='flatPiece')
+            td(class='tile')
+              p(class='piece')
+              p(class='flatPiece')
+            td(class='tile')
+              p(class='piece')
+              p(class='flatPiece')
+            td(class='tile')
+              p(class='piece')
+              p(class='flatPiece')
+          tr
+            td(class='tile')
+              p(class='piece')
+              p(class='flatPiece')
+            td(class='tile')
+              p(class='piece')
+              p(class='flatPiece')
+            td(class='tile')
+              p(class='piece')
+              p(class='flatPiece')
+            td(class='tile')
+              p(class='piece')
+              p(class='flatPiece')
+            td(class='tile')
+              p(class='piece')
+              p(class='flatPiece')
+            td(class='tile')
+              p(class='piece')
+              p(class='flatPiece')
+            td(class='tile')
+              p(class='piece')
+              p(class='flatPiece')
+            td(class='tile')
+              p(class='piece')
+              p(class='flatPiece')
+            td(class='tile')
+              p(class='piece')
+              p(class='flatPiece')                                          
           tr
             td(class='tile')
               p(class='piece')
@@ -278,47 +357,19 @@ html
             td
             td
         section(id='redPlayerResources' class='resources')
-          p(class='gold') g
-          p(class='energy') e
-          p(class='vp') vp
+          p(class='gold')
+          p(class='energy')
+          p(class='vp')
         section(id='bluePlayerResources' class='resources')
-          p(class='gold') g 
-          p(class='energy') e
-          p(class='vp') vp
-    section(id='displayerAndShopAndLogSection')
+          p(class='gold')
+          p(class='energy')
+          p(class='vp')
+    section(id='displayerAndShopAndButtonsAndLogSection')
       div(id='displayer')
-        div(id='pieceDisplayer')
-          p(id='displayerPieceName')
-          p(id='displayerPieceMovement')
-          p(id='displayerPiecePower')
-          p(id='displayerPieceHealth')
-          p(id='displayerPieceEnergy')
-          p(id='displayerPieceType')
-        div(id='tileDisplayer')
-          p(id='displayerFlatPieceName')
-          p(id='displayerFlatPieceHealth')
-          p(id='displayerTileStatuses')
-      section(id='buttons')
-        form(id='buyButton' action='')
-          button Buy
-        form(id='moveButton' action='')
-          button Move
-        form(id='buildButton' action='')
-          button Build
-        form(id='energizeButton' action='')
-          button Energize
-        form(id='endTurnButton' action='')
-          button End Turn
-        form(id='attackButton' action='')
-          button Attack
-        form(id='attackPieceButton' action='')
-          button Attack Piece
-        form(id='attackFlatPieceButton' action='')
-          button Attack Flat Piece                    
-        form(id='activateButton' action='')
-          button Activate
-        form(id='castButton' action='')
-          button Cast
+        ul(id='pieceProperties')
+          li a
+        ul(id='flatPieceProperties')            
+        ul(id='tileProperties')
       div(id='stores')
         table(id='buildings')
           tr
@@ -327,5 +378,3 @@ html
         table(id='spells')
           tr
       ul(id='log')
-
-  
