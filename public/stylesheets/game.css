@@ -5,20 +5,20 @@ td:hover {background-color: #FFFFE0;}
 
 #boardAndInventoriesAndNavBar {position: absolute; border: 2px dotted #cccc00; right: 40%; height: 100%; width: 60%; padding: 5px}
 #boardAndInventories {position: absolute; border: 2px dotted #000000; top: 5%; bottom: 5%; left: 5%; right: 5%;  height: 90%; width: 90%;}
-#board {position: absolute; top: 25%; left: 25%; height: 50%; width: 50%;}
+#board {position: absolute; top: 15%; left: 25%; height: 50%; width: 50%;}
 #board td {position: relative; border: 1px solid #606060; padding: 16px;}
 
 .flatPiece {position: absolute; right: 4px; bottom: 15px;} 
 .piece {position: absolute; left: 4px; bottom: 15px;}  
 
-#blueInventory {position: absolute; border: 1px solid #0000b3; left: 55%; top: 80%; width: 10%; height: 5%;}
+#blueInventory {position: absolute; border: 1px solid #0000b3; left: 55%; top: 85%; width: 10%; height: 5%;}
 #blueInventory td {position: relative; border: 1px solid #0000b3; padding: 16px;}
 
-#redInventory {position: absolute; border: 1px solid #cc0000; left: 55%; top: 15%; width: 10%; height: 5%;}
+#redInventory {position: absolute; border: 1px solid #cc0000; left: 55%; top: 5%; width: 10%; height: 5%;}
 #redInventory td {position: relative; border: 1px solid #cc0000; padding: 16px;}
 
-#bluePlayerResources {position: absolute; border: 1px solid #0000b3; top: 80%; left: 40%;}
-#redPlayerResources {position: absolute; border: 1px solid #cc0000; top: 15%; left: 40%;}
+#bluePlayerResources {position: absolute; border: 1px solid #0000b3; top: 85%; left: 40%;}
+#redPlayerResources {position: absolute; border: 1px solid #cc0000; top: 5%; left: 40%;}
 
 .gold {padding: 2px;}
 .energy {padding: 2px}

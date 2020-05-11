@@ -3,12 +3,55 @@ var buildings = []
 var spells = {}
 var _ = require('lodash');
 
-const boardLength = 11;
+const boardLength = 15;
 const boardWidth = 9;
 const startOfRedTiles = 0
 const endOfRedTiles = 3
-const startOfBlueTiles = 7
-const endOfBlueTiles = 10
+const startOfBlueTiles = 12
+const endOfBlueTiles = 15
+
+class Spell
+{
+  constructor(name, description, types, cost, boardAvatar, target)
+  {
+    this.name = name;
+    this.description = description
+    this.types = types
+    this.cost = cost
+    this.boardAvatar = boardAvatar
+    this.target = target
+  }
+}
+
+class Surge extends Spell
+{
+  constructor()
+  {
+    super("Surge", "+1 energy to a friendly piece", ["Spell"], 3, "SU", "Piece")
+  }
+
+  getTilesWhichCanBeCastOn(game)
+  {
+    if (this.owner == "Red")
+      var isRedPlayer = true
+    else
+      var isRedPlayer = false
+    return getTilesWherePiecesDontHaveFullEnergy(getTilesWithAFriendlyPiece(isRedPlayer, game.getAllTilesInListForm()))
+  }
+
+  cast(game, target)
+  {
+    target.increaseEnergy()
+
+    if(this.owner == "Blue")
+      game.bluePlayer.activeEnergy ++
+    else
+      game.redPlayer.activeEnergy ++ 
+  }
+}
+
+var surge = new Surge
+spells[surge.name] = surge
 
 class Piece
 {
@@ -52,7 +95,15 @@ class Piece
         movePieceFromOneTileToAnother(path[followIndex], path[leadIndex])
         this.movement --;
       }
-      //TODO: check for reactions(path[leadIndex])
+
+      if (game.reactions.has(path[leadIndex]))
+      {
+        for (var piece of game.reactions.get(path[leadIndex]))
+        {
+          piece.react(game, this, path[leadIndex])
+        }
+      }
+
       leadIndex ++
       followIndex ++ 
     }
@@ -92,6 +143,18 @@ class Piece
       this.energy -= 1
   }
 
+  increaseMovement()
+  {
+    if (this.movement < this.movementCapacity)
+      this.movement += 1
+  }
+
+  decreaseMovement()
+  {
+    if (this.movement != 0)
+      this.movement -= 1
+  }
+
   attack(game, victim)
   {
     victim.takeDamage(this, this.strength)
@@ -111,7 +174,6 @@ class Piece
   takeDamage(attacker, damage)
   {
     this.health -= damage
-    console.log(this.name + this.health)
   }
 
   die(game, tileDiedOn, killer)
@@ -121,6 +183,31 @@ class Piece
 }
 
 //name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, health, attackRange, isFlat, canAttack)
+class MovementPad extends Piece
+{
+  constructor()
+  {
+    super("Movement Pad", "when a friendly piece moves on to this it gets +1 movement", "", "MP", ["Building"], 3, 1, 0, 0, 1, 0, true, false)    
+  }
+
+  react(game, pieceThatTriggeredReaction, tileReactionTriggeredFrom)
+  {
+    if (this.owner == pieceThatTriggeredReaction.owner && this.energy != 0)
+      pieceThatTriggeredReaction.increaseMovement()
+  }
+
+  addReactionsWhenBuilt(game, tileBuiltOn)
+  {
+    if (game.reactions.has(tileBuiltOn))
+      game.reactions.get(tileBuiltOn).push(this)
+    else
+      game.reactions.set(tileBuiltOn, [this])
+  }
+}
+
+var movementPad = new MovementPad
+buildings[movementPad.name] = movementPad
+
 class AttackDrone extends Piece
 {
   constructor()
@@ -150,7 +237,6 @@ class AttackDrone extends Piece
       this.movementCapacity = 0 
       this.movement = 0
   }
-
 }
 
 var attackDrone = new AttackDrone
@@ -168,8 +254,8 @@ class BuilderDrone extends Piece
     if (this.energy < this.energyCapacity)
     {
       this.energy += 1
-      this.movementCapacity += 1
-      this.movement += 1
+      this.movementCapacity += 5
+      this.movement += 5
     }
   }
 
@@ -294,12 +380,14 @@ class LargeGoldFarm extends Piece
 var largeGoldFarm = new LargeGoldFarm
 buildings[largeGoldFarm.name] = largeGoldFarm
 
-class SmallPointsFarm extends Piece
+//name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movement, health, attackRange, isFlat, canAttack
+
+class SmallPointsMiner extends Piece
 {
   constructor()
   {
-    super("Small Points Farm", "produces (1*energy) victory points per turn", "", "SPF", ["Building"], 1, 3, 0, 0, 3, 0, false, false)
-    this.victoryPointProduction = 0
+    super("Small Points Miner", "produces (energy*VP square value) vp tokens", "", "SPM", ["Building"], 2, 2, 0, 0, 3, 0, false, false)
+    this.victoryPointTokenProduction = 0
   }
 
   increaseEnergy()
@@ -307,20 +395,29 @@ class SmallPointsFarm extends Piece
     if (this.energy < this.energyCapacity)
     {
       this.energy += 1
-      this.victoryPointProduction += 1
+      this.victoryPointTokenProduction += 1
+    }
+  }
+
+  reduceEnergy()
+  {
+    if (this.energy != 0)
+    {
+      this.energy -= 1
+      this.victoryPointTokenProduction -= 1
     }
   }
 }
 
-var smallPointsFarm = new SmallPointsFarm
-buildings[smallPointsFarm.name] = smallPointsFarm
+var smallPointsMiner = new SmallPointsMiner
+buildings[smallPointsMiner.name] = smallPointsMiner
 
-class MediumPointsFarm extends Piece
+class MediumPointsMiner extends Piece
 {
   constructor()
   {
-    super("Medium Points Farm", "produces (2*energy) victory points per turn", "", "MPF", ["Building"], 1, 3, 0, 0, 3, 0, false, false)
-    this.victoryPointProduction = 0
+    super("Medium Points Miner", "produces (2*energy*VP square value) vp tokens", "", "MPF", ["Building"], 5, 2, 0, 0, 3, 0, false, false)
+    this.victoryPointTokenProduction = 0
   }
 
   increaseEnergy()
@@ -328,20 +425,29 @@ class MediumPointsFarm extends Piece
     if (this.energy < this.energyCapacity)
     {
       this.energy += 1
-      this.victoryPointProduction += 2
+      this.victoryPointTokenProduction += 2
+    }
+  }
+
+  reduceEnergy()
+  {
+    if (this.energy != 0)
+    {
+      this.energy -= 1
+      this.victoryPointTokenProduction -= 2
     }
   }
 }
 
-var mediumPointsFarm = new MediumPointsFarm
-buildings[mediumPointsFarm.name] = mediumPointsFarm
+var mediumPointsMiner= new MediumPointsMiner
+buildings[mediumPointsMiner.name] = mediumPointsMiner
 
-class LargePointsFarm extends Piece
+class LargePointsMiner extends Piece
 {
   constructor()
   {
-    super("Large Points Farm", "produces (3*energy) victory points per turn", "", "LPF", ["Building"], 1, 3, 0, 0, 3, 0, false, false)
-    this.victoryPointProduction = 0
+    super("Large Points Miner", "produces (3*energy*VP square value) vp tokens", "", "LPF", ["Building"], 8, 2, 0, 0, 3, 0, false, false)
+    this.victoryPointTokenProduction = 0
   }
 
   increaseEnergy()
@@ -349,13 +455,22 @@ class LargePointsFarm extends Piece
     if (this.energy < this.energyCapacity)
     {
       this.energy += 1
-      this.victoryPointProduction += 3
+      this.victoryPointTokenProduction += 3
+    }
+  }
+
+  reduceEnergy()
+  {
+    if (this.energy != 0)
+    {
+      this.energy -= 1
+      this.victoryPointTokenProduction -= 3
     }
   }
 }
 
-var largePointsFarm = new LargePointsFarm
-buildings[largePointsFarm.name] = largePointsFarm
+var largePointsMiner = new LargePointsMiner
+buildings[largePointsMiner.name] = largePointsMiner
 
 //name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movement, health, attackRange, isFlat, canAttack
 
@@ -404,13 +519,14 @@ class Blight extends Piece
   }
 }
 
-
-
 var blight = new Blight
 buildings[blight.name] = blight
 
 module.exports.buildings = buildings
 module.exports.units = units
+module.exports.spells = spells
+
+
 
 /////////utilities//////////
 
@@ -500,6 +616,16 @@ function getTilesWithFriendlyBuilders(tiles, isRedPlayer)
   return newTiles
 }
 
+function getTilesWherePiecesDontHaveFullEnergy(tiles)
+{
+  var newTiles = []
+  for (tile of tiles)
+    if ((tile.piece != null && tile.piece.energy < tile.piece.energyCapacity) || (tile.flatPiece != null && tile.flatPiece.energy < tile.flatPiece.energyCapacity))
+      newTiles.push(tile)
+  return newTiles   
+}
+
+
 function getTilesWithoutAnyPiece(tiles)
 {
   var newTiles = []
@@ -551,6 +677,8 @@ function getTilesWithAFriendlyPiece(isRedPlayer, tiles)
   var newTiles = []
   for (tile of tiles)
     if (tile.piece != null && tile.piece.owner == friendlyOwner)
+        newTiles.push(tile)
+    else if (tile.flatPiece != null && tile.flatPiece.owner == friendlyOwner)
         newTiles.push(tile)
   return newTiles
 } 

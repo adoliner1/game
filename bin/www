@@ -31,12 +31,12 @@ var lobbyGameList = {}
 var gameList = {}
 
 
-const boardLength = 11;
+const boardLength = 15;
 const boardWidth = 9;
 const startOfRedTiles = 0
 const endOfRedTiles = 3
-const startOfBlueTiles = 8
-const endOfBlueTiles = 11
+const startOfBlueTiles = 12
+const endOfBlueTiles = 15
 
 io.on('connection', function(socket)
 {
@@ -98,6 +98,90 @@ io.on('connection', function(socket)
         io.to(socket.id).emit('new game data', convertServerGameToClientGame(gameList[host]))
       }
     }
+  })
+
+  socket.on('request to cast a spell', function(inventoryPosition, tile, targetID)
+  {
+    var game = findGameFromSocketID(socket.id)
+
+    if (game == null)
+    {
+      io.to(socket.id).emit("new log message", "No such game")
+      return
+    }
+
+    if (game.phase != "Action")
+    {
+      io.to(socket.id).emit("new log message", "Wrong phase")
+      return      
+    }
+
+    var isRedPlayer = findIfPlayerIsRedPlayerInGameFromSocketID(game, socket.id)
+    var player = (isRedPlayer) ? game.redPlayer : game.bluePlayer
+    var spell = player.inventory[inventoryPosition]
+
+    if (targetID == "Tile")
+      var target = game.board[tile.col][tile.row]
+    else if(targetID == "Flat Piece")
+      var target = game.board[tile.col][tile.row].flatPiece
+    else if(targetID == "Piece")
+      var target = game.board[tile.col][tile.row].piece
+
+    if (spell == null)
+    {
+      io.to(socket.id).emit("new log message", "No spell to cast")
+      return      
+    }  
+
+    if (!findIfItsAPlayersTurnInGame(isRedPlayer, game))
+    {
+      io.to(socket.id).emit("new log message", "Not your turn")
+      return  
+    }
+
+    var tilesWhichCanBeCastOn = spell.getTilesWhichCanBeCastOn(game)
+
+    if(!tilesWhichCanBeCastOn.includes(game.board[tile.col][tile.row]))
+    {
+      io.to(socket.id).emit("new log message", "Can't cast there")
+      return        
+    }
+
+    spell.cast(game, target)
+    player.inventory[inventoryPosition] = null
+
+    io.to(game.host).emit('new game state', convertServerGameToClientGame(game))
+  })
+
+  socket.on('request tiles which can be cast on', function(inventoryPosition)
+  {
+    var game = findGameFromSocketID(socket.id)
+
+    if (game == null)
+    {
+      io.to(socket.id).emit("new log message", "No such game")
+      return
+    }
+
+    if (game.phase != "Action")
+    {
+      io.to(socket.id).emit("new log message", "Wrong phase")
+      return      
+    }
+
+    var isRedPlayer = findIfPlayerIsRedPlayerInGameFromSocketID(game, socket.id)
+    var player = (isRedPlayer) ? game.redPlayer : game.bluePlayer
+
+    if (!findIfItsAPlayersTurnInGame(isRedPlayer, game))
+    {
+      io.to(socket.id).emit("new log message", "Not your turn")
+      return  
+    }
+
+    spell = player.inventory[inventoryPosition]
+
+    var castableTiles = spell.getTilesWhichCanBeCastOn(game)
+    io.to(socket.id).emit('new active tiles', castableTiles) 
   })
 
   socket.on('request tiles which can be attacked', function(tile)
@@ -263,7 +347,13 @@ io.on('connection', function(socket)
       return        
     }
 
-    tileToBuildOn.piece = piece
+    if (piece.isFlat)
+      tileToBuildOn.flatPiece = piece      
+    else
+      tileToBuildOn.piece = piece
+
+    if ("addReactionsWhenBuilt" in piece)
+      piece.addReactionsWhenBuilt(game, tileToBuildOn)
 
     //run piece on build effects
 
@@ -416,7 +506,7 @@ io.on('connection', function(socket)
 
     if (player.activeEnergy >= player.energyCapacity)
     {
-      io.to(socket.id).emit("new log message", "No energy to spend")
+      io.to(socket.id).emit("new log message", "No free energy")
       return             
     }
 
@@ -443,16 +533,16 @@ io.on('connection', function(socket)
       return      
     }
 
-    var piece = game.units[clientPiece.name]
-
+    if (clientPiece.types.includes("Unit"))
+      var piece = game.units[clientPiece.name]
+    else if (clientPiece.types.includes("Building"))
+      var piece = game.buildings[clientPiece.name]
+    else if (clientPiece.types.includes("Spell"))
+      var piece = game.spells[clientPiece.name]
     if (piece == null)
     {
-      var piece = game.buildings[clientPiece.name]
-      if (piece == null)
-      {
-        io.to(socket.id).emit("new log message", "Piece not in game")
-        return
-      }
+      io.to(socket.id).emit("new log message", "Piece not in game")
+      return
     }
 
     var isRedPlayer = findIfPlayerIsRedPlayerInGameFromSocketID(game, socket.id)
@@ -517,23 +607,27 @@ io.on('connection', function(socket)
     activePlayer.goldProduction = countGoldProductionForPlayer(game, isRedPlayer)
     activePlayer.gold += activePlayer.goldProduction
     activePlayer.energyCapacity = countEnergyCapacityProductionForPlayer(game, isRedPlayer)
+    activePlayer.victoryPointTokenProduction = countVictoryPointTokenProductionForPlayer(game, isRedPlayer)
     restoreMovementForPlayersPieces(game, isRedPlayer)
 
     if (game.victoryPointTokenSupply < activePlayer.victoryPointTokenProduction)
     {
-      activePlayer.victoryPointTokens += game.victoryPointTokenSupply
+      activePlayer.victoryPoints += game.victoryPointTokenSupply
       game.victoryPointTokenSupply = 0
     }
     else
-      activePlayer.victoryPointTokens += activePlayer.victoryPointTokenProduction    
-
-    if (allPlatformsAreOccupied(game) || game.victoryTokens == 0)
     {
-      io.to(game.host).emit("new log message", "Game over, all platforms occupied")      
+      activePlayer.victoryPoints += activePlayer.victoryPointTokenProduction
+      game.victoryPointTokenSupply -= activePlayer.victoryPointTokenProduction
+    }
+
+    if (game.victoryPointTokenSupply == 0 || allVPTokenTilesAreOccupied(game))
+    {
+      io.to(game.host).emit("new log message", "Game over")      
       
-      if (game.redPlayer.victoryPointTokens > game.bluePlayer.victoryPointTokens)
+      if (game.redPlayer.victoryPoints > game.bluePlayer.victoryPoints)
         io.to(game.host).emit("new log message", "Red Player Wins")
-      else if (game.bluePlayer.victoryPointTokens > game.redPlayer.victoryPointTokens || isRedPlayer)
+      else if (game.bluePlayer.victoryPoints > game.redPlayer.victoryPoints || isRedPlayer)
         io.to(game.host).emit("new log message", "Blue Player Wins")
       else
         io.to(game.host).emit("new log message", "It's a tie")
@@ -559,15 +653,15 @@ io.on('connection', function(socket)
 
   function updatePlatformOwnership(game)
   {
-    for (platformTile of game.getPlatformTiles)
+    for (platformTile of game.getVPTokenTiles)
       if (platformTile.piece != null)
         platformTile.flatPiece.owner = platformTile.piece.owner 
   }
 
-  function allPlatformsAreOccupied(game)
+  function allVPTokenTilesAreOccupied(game)
   {
-    for (platformTile of game.getPlatformTiles())
-      if (platformTile.flatPiece.owner == null)
+    for (tile of game.getVPTokenTiles())
+      if (tile.flatPiece == null && tile.piece == null)
         return false
     return true
   }
@@ -590,10 +684,11 @@ io.on('connection', function(socket)
     var totalVictoryPointTokenProduction = 0
     for (tile of game.getAllTilesInListForm())
     {
-      if(tile.piece != null && findIfAPlayerOwnsAPiece(isRedPlayer, tile.piece) && tile.piece.victoryPointTokenProduction != null)
-        totalVictoryPointTokenProduction += tile.piece.victoryPointTokenProduction
-      if(tile.flatPiece != null && findIfAPlayerOwnsAPiece(isRedPlayer, tile.flatPiece) && tile.flatPiece.victoryPointTokenProduction != null)
-        totalVictoryPointTokenProduction += tile.flatPiece.victoryPointTokenProduction
+      var potentialVPTokensFromTile = findHowManyVPTokensTileProduces(tile)
+      if(tile.piece != null && potentialVPTokensFromTile != 0 && findIfAPlayerOwnsAPiece(isRedPlayer, tile.piece) && tile.piece.victoryPointTokenProduction != null)
+        totalVictoryPointTokenProduction += tile.piece.victoryPointTokenProduction*potentialVPTokensFromTile
+      if(tile.flatPiece != null && potentialVPTokensFromTile != 0 && findIfAPlayerOwnsAPiece(isRedPlayer, tile.flatPiece) && tile.flatPiece.victoryPointTokenProduction != null)
+        totalVictoryPointTokenProduction += tile.flatPiece.victoryPointTokenProduction*potentialVPTokensFromTile
     }
     return totalVictoryPointTokenProduction    
   }
@@ -611,7 +706,17 @@ io.on('connection', function(socket)
     return totalEnergyCapacityProduction    
   }
 
-  
+  function findHowManyVPTokensTileProduces(tile)
+  {
+    if (tile.statuses.includes("VP1"))
+      return 1
+    else if (tile.statuses.includes("VP2"))
+      return 2
+    else if (tile.statuses.includes("VP3"))
+      return 3
+    else 
+      return 0
+  }
 
   //////////////////////////////////////////
   //lobby functions
@@ -642,30 +747,30 @@ io.on('connection', function(socket)
         }
       }
 
-      var goldPlatform = {name: "Gold Platform", goldProduction: 5, types: ["Platform"],  platformType: "Gold", owner: null, boardAvatar: "GP", isFlat: true}
-      var victoryPointTokenPlatform = {name: "Victory Platform", victoryPointTokenProduction: 2, types: ["Platform"], platformType: "Victory", owner: null, boardAvatar: "VP", isFlat: true}
-      var energyPlatform = {name: "Energy Platform", energyCapacityProduction: 3, types: ["Platform"], platformType: "Energy", owner: null, boardAvatar: "EP", isFlat: true}
-
-      //set platforms
-      board[1][4].flatPiece = _.cloneDeep(goldPlatform)
-      board[7][4].flatPiece = _.cloneDeep(energyPlatform)
-      board[1][6].flatPiece = _.cloneDeep(goldPlatform)
-      board[7][6].flatPiece = _.cloneDeep(energyPlatform)
-      board[4][5].flatPiece = _.cloneDeep(victoryPointTokenPlatform)
+      //set vp token squares
+      board[2][5].statuses.push("VP1")
+      board[4][5].statuses.push("VP1")
+      board[6][5].statuses.push("VP1")
+      board[2][7].statuses.push("VP2")
+      board[4][7].statuses.push("VP3")
+      board[6][7].statuses.push("VP2")
+      board[2][9].statuses.push("VP1")
+      board[4][9].statuses.push("VP1")
+      board[6][9].statuses.push("VP1")         
 
       //set starting buildings
       for (var col = 2; col < 7; col++)
       {
-        board[col][8].piece = _.cloneDeep(pieces.buildings['Small Gold Farm'])
-        board[col][8].piece.owner = "Blue"
+        board[col][12].piece = _.cloneDeep(pieces.buildings['Small Gold Farm'])
+        board[col][12].piece.owner = "Blue"
         board[col][2].piece = new _.cloneDeep(pieces.buildings['Small Gold Farm'])
         board[col][2].piece.owner = "Red"
       }
 
       for (var col = 3; col < 6; col++)
       {
-          board[col][10].piece = new _.cloneDeep(pieces.buildings['Small Energy Farm'])
-          board[col][10].piece.owner = "Blue"
+          board[col][14].piece = new _.cloneDeep(pieces.buildings['Small Energy Farm'])
+          board[col][14].piece.owner = "Blue"
           board[col][0].piece = new _.cloneDeep(pieces.buildings['Small Energy Farm'])
           board[col][0].piece.owner = "Red"
       }
@@ -673,11 +778,13 @@ io.on('connection', function(socket)
       var newGame =   
       {
         host: host,
-        redPlayer: {socketID: null, turnsTaken: 0, Name: name, goldProduction: 0, gold: 5, victoryPointTokenProduction: 0, victoryPoints: 0, activeEnergy: 0, energyCapacity: 3, inventory: Array(5)},
-        bluePlayer: {socketID: null, turnsTaken: 0, Name: host, goldProduction: 0, gold: 5, victoryPointTokenProduction: 0, victoryPoints: 0, activeEnergy: 0, energyCapacity: 3, inventory: Array(5)},
+        redPlayer: {socketID: null, turnsTaken: 0, Name: name, goldProduction: 0, gold: 99, victoryPointTokenProduction: 0, victoryPoints: 0, activeEnergy: 0, energyCapacity: 3, inventory: Array(5)},
+        bluePlayer: {socketID: null, turnsTaken: 0, Name: host, goldProduction: 0, gold: 99, victoryPointTokenProduction: 0, victoryPoints: 0, activeEnergy: 0, energyCapacity: 3, inventory: Array(5)},
         board: board,
+        reactions: new Map,
         buildings: pieces.buildings,
         units: pieces.units,
+        spells: pieces.spells,
         victoryPointTokenSupply: 100,
         phase: "Action",
         isRedPlayersTurn: true,
@@ -691,14 +798,18 @@ io.on('connection', function(socket)
           return redTiles
         },
 
-        getPlatformTiles: function()
+        getVPTokenTiles: function()
         {
           var platformTiles = []
-          platformTiles.push(board[1][4])
-          platformTiles.push(board[7][4])
-          platformTiles.push(board[1][6])
-          platformTiles.push(board[7][6])
+          platformTiles.push(board[2][5])
           platformTiles.push(board[4][5])
+          platformTiles.push(board[6][5])
+          platformTiles.push(board[2][7])
+          platformTiles.push(board[4][7])
+          platformTiles.push(board[6][7])
+          platformTiles.push(board[2][9])
+          platformTiles.push(board[4][9])
+          platformTiles.push(board[6][9])          
           return platformTiles     
         },
 
@@ -713,7 +824,7 @@ io.on('connection', function(socket)
 
         getAllTilesInListForm: function()
         {
-          allTiles = []
+          var allTiles = []
           for (var col = 0; col < boardWidth; col++)
             allTiles = allTiles.concat(board[col])
           return allTiles
@@ -873,6 +984,7 @@ function convertServerGameToClientGame(game)
   clientGame.bluePlayer.inventory = (game.bluePlayer.inventory).map(getPieceForClientFromGamePiece)
   clientGame.isRedPlayersTurn = game.isRedPlayersTurn
   clientGame.board = convertServerBoardToClientBoard(game.board)
+  clientGame.spells = convertDictionaryToList(game.spells).map(getPieceForClientFromGamePiece)
   clientGame.units = convertDictionaryToList(game.units).map(getPieceForClientFromGamePiece)
   clientGame.buildings = convertDictionaryToList(game.buildings).map(getPieceForClientFromGamePiece)
   return clientGame
