@@ -10,7 +10,7 @@ $(function ()
 {
 	//globals
 	var socket = io()
-	window.actionButtons = [($('#buyButton')),($('#buildButton')),($('#moveButton')),($('#energizeButton')),($('#activateButton')),($('#castButton')),($('#attackButton')),($('#attackPieceButton')),($('#attackFlatPieceButton')), ($('#castOnFlatPieceButton')), ($('#castOnPieceButton'))]
+	window.actionButtons = [($('#castUnitSpellOnPieceButton')), ($('#castUnitSpellButton')), ($('#buyButton')),($('#buildButton')),($('#moveButton')),($('#energizeButton')),($('#activateButton')),($('#castButton')),($('#attackButton')),($('#attackPieceButton')),($('#attackFlatPieceButton')), ($('#castOnFlatPieceButton')), ($('#castOnPieceButton'))]
 	window.allButtons = [($('#endTurnButton')), ($('#endActionPhaseButton'))].concat(actionButtons)
 
 	//tiles which can currently be acted on(moved to, attacked, casted on, built on)
@@ -25,8 +25,8 @@ $(function ()
 	//modes are control flow variables
 	window.buildMode = false
 	window.moveMode = false
-	window.castonPiecesMode = false
-	window.castOnTilesMode = false
+	window.castMode = false
+	window.unitCastMode = false
 	window.attackMode = false
 
 	disableAllButtons()
@@ -236,27 +236,50 @@ $(function ()
 						socket.emit('request to attack a piece', tilePieceIsPotentiallyAttackingFrom,  currentlySelectedTile, true)
 				}
 			}
+			else if(unitCastMode)
+			{
+				if(tilePieceIsPotentiallyCastingSpellFrom.piece.spellTarget == "Piece")
+				{
+					if (currentlySelectedTile.piece != null && currentlySelectedTile.flatPiece != null)
+					{
+						enableAndShowButton($('#castUnitSpellOnFlatPieceButton'))
+						enableAndShowButton($('#castUnitSpellOnPieceButton'))				
+					}
+					else if (currentlySelectedTile.piece != null)
+						socket.emit('request to cast a unit spell', tilePieceIsPotentiallyCastingSpellFrom, currentlySelectedTile, "Piece")
+					else if (currentlySelectedTile.flatPiece != null)
+						socket.emit('request to cast a unit spell', tilePieceIsPotentiallyCastingSpellFrom, currentlySelectedTile, "Flat Piece")
+				}
+				else
+					socket.emit('request to cast a unit spell', tilePieceIsPotentiallyCastingSpellFrom, currentlySelectedTile, "Tile")
+			}
 		}
 
 		else if (currentlySelectedTile.piece != null && isThisPlayersTurn() && playerOwnsPiece(isRedPlayer, currentlySelectedTile.piece))
 		{
-			if (currentlySelectedTile.piece.movement > 0 && game.phase == "Action")
+			if (currentlySelectedTile.piece.movement > 0 && game.phase == "Action" && currentlySelectedTile.piece.isActive)
 			{	
 				window.tilePieceIsPotentiallyMovingFrom = currentlySelectedTile
 				enableAndShowButton($('#moveButton'))
 			}
 
-			if (currentlySelectedTile.piece.canAttack == true && game.phase == "Action")
+			if (currentlySelectedTile.piece.canAttack && game.phase == "Action" && currentlySelectedTile.piece.isActive)
 			{
 				window.tilePieceIsPotentiallyAttackingFrom = currentlySelectedTile
 				enableAndShowButton($('#attackButton'))
 			}
 
 			var playerFreeEnergy = (window.isRedPlayer) ? (game.redPlayer.energyCapacity - game.redPlayer.activeEnergy) : (game.bluePlayer.energyCapacity - game.bluePlayer.activeEnergy)
-			if ((currentlySelectedTile.piece.energy < currentlySelectedTile.piece.energyCapacity) && playerFreeEnergy > 0 && game.phase == "Energize")
+			if ((currentlySelectedTile.piece.energy < currentlySelectedTile.piece.energyCapacity) && playerFreeEnergy > 0 && game.phase == "Energize" && currentlySelectedTile.piece.canReceiveFreeEnergyAtThisLocation)
 			{
 				window.piecePotentiallyBeingEnergized = currentlySelectedTile.piece
 				enableAndShowButton($('#energizeButton'))
+			}
+
+			if(currentlySelectedTile.piece.hasUnitSpells && game.phase == "Action" && currentlySelectedTile.piece.isActive)
+			{
+				window.tilePieceIsPotentiallyCastingSpellFrom = currentlySelectedTile
+				enableAndShowButton($('#castUnitSpellButton'))
 			}
 		}
 
@@ -294,6 +317,14 @@ $(function ()
 		e.preventDefault()
 		buildMode = true
 		socket.emit('request tiles which can be built on', currentInventoryPosition)
+	})
+
+	$('#castUnitSpellButton').submit(function(e)
+	{
+		disableAllActionButtons()
+		e.preventDefault()
+		unitCastMode = true
+		socket.emit('request tiles unit can cast on', tilePieceIsPotentiallyCastingSpellFrom)
 	})
 
 	$('#moveButton').submit(function(e)
@@ -338,6 +369,21 @@ $(function ()
 		disableAllActionButtons()
 		e.preventDefault()
 		socket.emit('request to attack a piece', tilePieceIsPotentiallyAttackingFrom,  currentlySelectedTile, true)
+    })
+
+	$('#castUnitSpellOnFlatPieceButton').submit(function(e)
+	{
+		disableAllActionButtons()
+		e.preventDefault()
+		socket.emit('request to cast a unit spell', tilePieceIsPotentiallyCastingSpellFrom, currentlySelectedTile, "Flat Piece")
+
+    })
+
+    $('#castUnitSpellButton').submit(function(e)
+	{
+		disableAllActionButtons()
+		e.preventDefault()
+		socket.emit('request to cast a unit spell', tilePieceIsPotentiallyCastingSpellFrom, currentlySelectedTile, "Piece")
     })
 
 	$('#castOnFlatPieceButton').submit(function(e)
@@ -438,13 +484,27 @@ function updateDOMForTile(tile)
 {
 	var DOMObject = getDOMForTile(tile)
 	if (tile.flatPiece != null)
+	{
 		DOMObject.children(".flatPiece").html(tile.flatPiece.boardAvatar)
+		assignPieceColor(tile.flatPiece.owner, DOMObject.children(".flatPiece"))
+	}
 	else
 		DOMObject.children(".flatPiece").html("")
 	if (tile.piece != null)
+	{
 		DOMObject.children(".piece").html(tile.piece.boardAvatar)
+		assignPieceColor(tile.piece.owner, DOMObject.children(".piece"))		
+	}
 	else
 		DOMObject.children(".piece").html("")
+}
+
+function assignPieceColor(owner, DOMObject)
+{
+	if (owner == "Blue")
+		DOMObject.css('color', 'blue')
+	else
+		DOMObject.css('color', 'red')
 }
 
 function hoverEffectForTileAndPath(tileJQueryObject, isHovering)

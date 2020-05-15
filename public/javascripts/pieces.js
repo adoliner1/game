@@ -55,7 +55,7 @@ spells[surge.name] = surge
 
 class Piece
 {
-  constructor(name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, health, attackRange, isFlat, canAttack)
+  constructor(name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, healthCapacity, attackRange, isFlat, canAttack)
   {
     this.name = name;
     this.description = description
@@ -68,11 +68,21 @@ class Piece
     this.strength = strength
     this.movement = movementCapacity
     this.movementCapacity = movementCapacity
-    this.health = health
+    this.healthCapacity = healthCapacity
+    this.health = healthCapacity
     this.attackRange = attackRange
     this.isFlat = isFlat
     this.canAttack = canAttack
+    this.canReceiveFreeEnergyAtThisLocation = false
+    this.isActive = false
   }
+
+  canReceiveFreeEnergyAtTile(game, tile)
+  {
+    if ((this.owner == "Red" && tile.row < 3) || (this.owner == "Blue" && tile.row > 11))
+      return true
+    return isInRangeOfFriendlyConduit(game, this.owner, tile)
+  }  
 
   getAttackableTiles(game, pieceLocation)
   {
@@ -104,6 +114,8 @@ class Piece
         }
       }
 
+      this.canReceiveFreeEnergyAtThisLocation = this.canReceiveFreeEnergyAtTile(game, path[leadIndex])
+
       leadIndex ++
       followIndex ++ 
     }
@@ -131,16 +143,29 @@ class Piece
     }
   }
 
+  increaseHealth(amount)
+  {
+    if(this.health + amount <= this.healthCapacity)
+      this.health += amount
+    else
+      this.health = this.healthCapacity
+  }
+
   increaseEnergy()
   {
     if (this.energy < this.energyCapacity)
       this.energy += 1
+
+    if(this.energy > 0)
+      this.isActive = true
   }
 
   reduceEnergy()
   {
     if(this.energy != 0)
       this.energy -= 1
+    if(this.energy == 0)
+      this.isActive = false
   }
 
   increaseMovement()
@@ -155,30 +180,31 @@ class Piece
       this.movement -= 1
   }
 
-  attack(game, victim)
+  attack(game, victim, attackerTile, victimTile)
   {
-    victim.takeDamage(this, this.strength)
-    victim.getAttacked(game, this)
+    this.isActive = false
+    victim.takeDamage(game, this, this.strength, attackerTile, victimTile)
+    if (victim != null)
+      victim.respondToAttack(game, this, attackerTile, victimTile)
   }
 
-  getAttacked(game, attacker)
+  respondToAttack(game, attacker, attackerTile, victimTile)
   {
-    this.respondToAttack(game, attacker)
+    if (getDistanceBetweenTwoTiles(attackerTile, victimTile) < this.attackRange)
+      attacker.takeDamage(game, this, this.strength, attackerTile, victimTile)
   }
 
-  respondToAttack(game, attacker)
-  {
-    attacker.takeDamage(this, this.strength)
-  }
-
-  takeDamage(attacker, damage)
+  takeDamage(game, attacker, damage, attackerTile, victimTile)
   {
     this.health -= damage
+    if (this.health <= 0)
+      this.die(game, attacker, attackerTile, victimTile)
   }
 
-  die(game, tileDiedOn, killer)
+  die(game, killer, attackerTile, victimTile)
   {
-      tileDiedOn.piece = null
+      victimTile.piece = null
+      //remove reactions
   }
 }
 
@@ -198,7 +224,7 @@ class MovementPad extends Piece
 
   addReactionsWhenBuilt(game, tileBuiltOn)
   {
-    if (game.reactions.has(tileBuiltOn))
+    if (game.reactions.has(tileBuiltOn)) 
       game.reactions.get(tileBuiltOn).push(this)
     else
       game.reactions.set(tileBuiltOn, [this])
@@ -207,6 +233,180 @@ class MovementPad extends Piece
 
 var movementPad = new MovementPad
 buildings[movementPad.name] = movementPad
+
+class Archer extends Piece
+{
+  constructor()
+  {
+    super("Archer", "+1 energy = +1 strength -- can't shoot through non-flat pieces.", "", "AR", ["Unit"], 4, 2, 0, 0, 1, 3, false, true)
+  }
+
+  increaseEnergy()
+  {
+    if (this.energy < this.energyCapacity)
+    {
+      this.energy += 1
+      this.strength += 1
+      this.movementCapacity = 1
+      this.movement = 1
+    }
+  }
+
+  reduceEnergy()
+  {
+    if (this.energy != 0)
+    {
+      this.energy -= 1
+      this.strength -= 1
+    }
+    if (this.energy == 0)
+      this.movementCapacity = 0 
+      this.movement = 0
+  }
+
+  getAttackableTiles(game, pieceLocation)
+  {
+    return getTilesWithAPiece(getAttackableTilesThatDontGoThroughAnotherUnit(game.board, pieceLocation))
+  }
+}
+
+var archer = new Archer
+units[archer.name] = archer
+
+//name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, health, attackRange, isFlat, canAttack)
+class PowerPriest extends Piece
+{
+  constructor()
+  {
+    super("Power Priest", "unit spell: a friendly unit in an adjacent tile gets +2 health. reduce this piece's energy by 1", "", "PP", ["Unit", "Conduit"], 4, 1, 0, 1, 1, 0, false, false)
+    this.distributionRange = 1
+    this.hasUnitSpells = true
+    this.spellTarget = "Piece"
+  }
+
+  getTilesThatUnitSpellCanBeCastOn(game, tile)
+  {
+    var isRedPlayer = this.owner == "Red" ? true : false 
+    return getTilesWithAFriendlyPiece(isRedPlayer, getAdjacentTiles(game.board, tile))
+  }
+
+  castSpell(game, target)
+  {
+    target.increaseHealth(2)
+    this.reduceEnergy()
+
+    if(target.owner == "Blue")
+      game.bluePlayer.activeEnergy --
+    else
+      game.redPlayer.activeEnergy -- 
+  }
+}
+
+var powerPriest = new PowerPriest
+units[powerPriest.name] = powerPriest
+
+//name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, health, attackRange, isFlat, canAttack)
+
+
+class EnergyTower extends Piece
+{
+  constructor()
+  {
+    super("Energy Tower", "distribution range = 2", "", "ET", ["Building", "Conduit"], 4, 1, 0, 0, 4, 0, false, false)
+    this.distributionRange = 2
+  }
+}
+
+var energyTower = new EnergyTower
+buildings[energyTower.name] = energyTower
+
+
+//name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, health, attackRange, isFlat, canAttack)
+
+class Hopper extends Piece
+{
+  constructor()
+  {
+    super("Hopper", "+1 energy = +2 movement capacity -- this unit moves 2 squares at a time hops over the first square. if it hops over an enemy piece, that piece takes 3 damage", "", "HP", ["Unit"], 5, 2, 0, 0, 2, 0, false, false)
+  }  
+  increaseEnergy()
+  {
+    if (this.energy < this.energyCapacity)
+    {
+      this.energy += 1
+      this.movementCapacity = 2*this.energy
+    }
+  }
+
+  reduceEnergy()
+  {
+    if (this.energy != 0)
+    {
+      this.energy -= 1
+      if(this.movementCapacity >= 2)
+        this.movementCapacity = this.movementCapacity - 2
+      else
+        this.movementCapacity = 0
+    }
+
+    if (this.energy == 0)
+      this.movementCapacity = 0 
+  }
+
+  getTilesWhichCanBeMovedToAndThePathThere(game, fromTile)
+  {
+    return getTilesInHopRangeAndThePathThere(game.board, fromTile)
+  }
+
+  move(game, initialTile, path)
+  {
+    var leadIndex = 0
+    var followIndex = -1
+    var movedOverTile = null
+
+    while (leadIndex < path.length && this.movement > 0)
+    {
+      if (followIndex == -1)
+      {
+        movePieceFromOneTileToAnother(initialTile, path[leadIndex])
+        this.movement = this.movement - 2;
+        movedOverTile = getTileBetweenTwoTilesTwoSpacesApartInLine(game.board, initialTile, path[leadIndex])
+      }
+      else
+      {
+        movePieceFromOneTileToAnother(path[followIndex], path[leadIndex])
+        this.movement = this.movement - 2;
+        movedOverTile = getTileBetweenTwoTilesTwoSpacesApartInLine(game.board, path[followIndex], path[leadIndex])
+      }
+
+      if (movedOverTile.piece != null && this.owner != movedOverTile.piece.owner)
+      {
+        movedOverTile.piece.takeDamage(game, this, 3, path[leadIndex], movedOverTile)
+      }
+
+      if (movedOverTile.flatPiece != null && this.owner != movedOverTile.flatPiece.owner)
+      {
+        movedOverTile.flatPiece.takeDamage(game, this, 3, path[leadIndex], movedOverTile)        
+      }
+
+      if (game.reactions.has(path[leadIndex]))
+      {
+        for (var piece of game.reactions.get(path[leadIndex]))
+        {
+          piece.react(game, this, path[leadIndex])
+        }
+      }
+
+      this.canReceiveFreeEnergyAtThisLocation = this.canReceiveFreeEnergyAtTile(game, path[leadIndex])
+
+      leadIndex ++
+      followIndex ++ 
+    }
+  }   
+}
+
+var hopper = new Hopper
+units[hopper.name] = hopper
 
 class AttackDrone extends Piece
 {
@@ -279,7 +479,7 @@ class Drainer extends Piece
 {
   constructor()
   {
-    super("Drainer", "if energy != 0, +2 movement +1 strength, and this units attacks reduce the victims energy by 1", "", "DR", ["Unit"], 5, 1, 1, 0, 2, 1, false, true)
+    super("Drainer", "if energy != 0, +2 movement +1 strength, and this units attacks reduce the victims energy by 1", "", "DR", ["Unit"], 5, 1, 0, 0, 2, 1, false, true)
   }
 
   increaseEnergy()
@@ -304,12 +504,14 @@ class Drainer extends Piece
     }
   }
 
-  attack(game, victim)
+  attack(game, victim, attackerTile, victimTile)
   {
-    victim.takeDamage(this, this.strength)
+    this.isActive = false
+    victim.takeDamage(game, this, this.strength, attackerTile, victimTile)
     if(this.energy > 0)
       victim.reduceEnergy(1)
-    victim.getAttacked(game, this)
+    if (victim != null)
+      victim.respondToAttack(game, this, attackerTile, victimTile)
   }
 }
 
@@ -515,7 +717,7 @@ class Blight extends Piece
 {
   constructor()
   {
-    super("Blight", "-1 victory point for territory owner", "", "BL", ["Building, Blight"], 0, 0, 0, 0, 1, 0, true, false)
+    super("Blight", "-1 victory point for territory owner", "", "BL", ["Building", "Blight"], 0, 0, 0, 0, 1, 0, true, false)
   }
 }
 
@@ -526,9 +728,103 @@ module.exports.buildings = buildings
 module.exports.units = units
 module.exports.spells = spells
 
-
-
 /////////utilities//////////
+
+function isInRangeOfFriendlyConduit(game, playerColor, pieceTile)
+{
+  for (var tile of game.getAllTilesInListForm())
+  {
+    var piece = tile.piece
+    var flatPiece = tile.flatPiece
+    if(piece != null && piece.types.includes("Conduit") && piece.owner == playerColor && getDistanceBetweenTwoTiles(tile, pieceTile) <= piece.distributionRange && piece.isActive)
+      return true
+    if(flatPiece != null && flatPiece.types.includes("Conduit") && flatPiece.owner == playerColor && getDistanceBetweenTwoTiles(flatPiece, pieceTile) <= flatPiece.distributionRange && flatPiece.isActive)
+      return true
+  }
+  return false
+}
+
+function getTileBetweenTwoTilesTwoSpacesApartInLine(board, tile1, tile2)
+{
+  if (tile1.row == tile2.row)
+    return board[(tile1.col + tile2.col)/2][tile1.row]
+  else
+    return board[tile1.col][(tile1.row + tile2.row)/2]
+}
+
+function getAttackableTilesThatDontGoThroughAnotherUnit(board, fromTile)
+{
+  var tilesThatCanBeAttacked = []
+  getAttackableTilesThatDontGoThroughAnotherUnitHelper(board, fromTile, fromTile.piece.attackRange, tilesThatCanBeAttacked)
+  return tilesThatCanBeAttacked
+}
+
+function getAttackableTilesThatDontGoThroughAnotherUnitHelper(board, tile, attackRangeRemaining, tilesThatCanBeAttacked)
+{
+  if (attackRangeRemaining == 0)
+    return
+
+  var adjacentTiles = getAdjacentTiles(board, tile)
+  for (adjacentTile of adjacentTiles)
+  {
+    if (adjacentTile.piece != null)
+      tilesThatCanBeAttacked.push(adjacentTile)
+    else
+      getAttackableTilesThatDontGoThroughAnotherUnitHelper(board, adjacentTile, attackRangeRemaining-1, tilesThatCanBeAttacked)
+  }
+}
+
+function getTilesInHopRangeAndThePathThere(board, fromTile)
+{
+  var tilesThatCanBeHoppedToAndThePathThere = new Map()
+  var currentPath = []
+  getTilesInHopRangeAndThePathThereHelper(board, fromTile, fromTile.piece.movement, tilesThatCanBeHoppedToAndThePathThere, currentPath)
+  return tilesThatCanBeHoppedToAndThePathThere
+}
+
+function getTilesInHopRangeAndThePathThereHelper(board, tile, movementLeft, tilesThatCanBeHoppedToAndThePathThere, currentPath)
+{
+  if (movementLeft <= 0)
+    return
+
+  var hopTiles = getTilesTwoAwayFromTileInLine(board, tile)
+  for (hopTile of hopTiles)
+  {
+    if (hopTile.piece == null)
+    {
+      var newPath = _.cloneDeep(currentPath)
+      newPath.push(hopTile)
+
+      if (tilesThatCanBeHoppedToAndThePathThere.has(hopTile))
+      {
+        if (newPath.length < tilesThatCanBeHoppedToAndThePathThere.get(hopTile).length)
+        {
+          tilesThatCanBeHoppedToAndThePathThere.set(hopTile, newPath)
+        }
+      }
+      else
+      {
+        tilesThatCanBeHoppedToAndThePathThere.set(hopTile, newPath) 
+      } 
+      getTilesInHopRangeAndThePathThereHelper(board, hopTile, movementLeft-2, tilesThatCanBeHoppedToAndThePathThere, newPath)
+    }
+  }
+}
+
+function getTilesTwoAwayFromTileInLine(board, tile)
+{
+  var tilesTwoAwayFromTileInLine = []
+  if (tile.row - 2 >= 0)
+    tilesTwoAwayFromTileInLine.push(board[tile.col][tile.row-2])
+  if (tile.row + 2 < boardLength)
+    tilesTwoAwayFromTileInLine.push(board[tile.col][tile.row+2])
+  if (tile.col - 2 >= 0)
+    tilesTwoAwayFromTileInLine.push(board[tile.col-2][tile.row])
+  if (tile.col + 2 < boardWidth)
+    tilesTwoAwayFromTileInLine.push(board[tile.col+2][tile.row])
+  return tilesTwoAwayFromTileInLine  
+}
+
 
 function getTilesInMoveRangeAndThePathThere(board, fromTile)
 {
@@ -536,10 +832,6 @@ function getTilesInMoveRangeAndThePathThere(board, fromTile)
   var currentPath = []
   getTilesInMoveRangeAndThePathThereHelper(board, fromTile, fromTile.piece.movement, tilesThatCanBeMovedToAndThePathThere, currentPath)
   return tilesThatCanBeMovedToAndThePathThere
-}
-
-function onlyUnique(value, index, self) { 
-    return self.indexOf(value) === index;
 }
 
 function getTilesInMoveRangeAndThePathThereHelper(board, tile, movementLeft, tilesThatCanBeMovedToAndThePathThere, currentPath)
@@ -720,3 +1012,6 @@ function getAdjacentTiles(board, tile)
   return adjacentTiles
 }
 
+function onlyUnique(value, index, self) { 
+    return self.indexOf(value) === index;
+}

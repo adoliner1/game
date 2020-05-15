@@ -153,6 +153,101 @@ io.on('connection', function(socket)
     io.to(game.host).emit('new game state', convertServerGameToClientGame(game))
   })
 
+  socket.on('request to cast a unit spell', function(casterTile, targetTile, targetID)
+  {
+    var game = findGameFromSocketID(socket.id)
+
+    if (game == null)
+    {
+      io.to(socket.id).emit("new log message", "No such game")
+      return
+    }
+
+    if (game.phase != "Action")
+    {
+      io.to(socket.id).emit("new log message", "Wrong phase")
+      return      
+    }
+
+    var isRedPlayer = findIfPlayerIsRedPlayerInGameFromSocketID(game, socket.id)
+    var player = (isRedPlayer) ? game.redPlayer : game.bluePlayer
+
+    if (targetID == "Tile")
+      var target = game.board[targetTile.col][targetTile.row]
+    else if(targetID == "Flat Piece")
+      var target = game.board[targetTile.col][targetTile.row].flatPiece
+    else if(targetID == "Piece")
+      var target = game.board[targetTile.col][targetTile.row].piece
+
+    var caster = game.board[casterTile.col][casterTile.row].piece
+
+    if (!caster.hasUnitSpells)
+    {
+      io.to(socket.id).emit("new log message", "No spell to cast")
+      return      
+    }
+
+    if(!caster.isActive)
+    {
+      io.to(socket.id).emit("new log message", "Piece is inactive")
+      return       
+    }
+
+    if (!findIfItsAPlayersTurnInGame(isRedPlayer, game))
+    {
+      io.to(socket.id).emit("new log message", "Not your turn")
+      return  
+    }
+
+    var tilesWhichCanBeCastOn = caster.getTilesThatUnitSpellCanBeCastOn(game, casterTile)
+
+    if(!tilesWhichCanBeCastOn.includes(game.board[targetTile.col][targetTile.row]))
+    {
+      io.to(socket.id).emit("new log message", "Can't cast there")
+      return        
+    }
+
+    caster.castSpell(game, target)
+
+    io.to(game.host).emit('new game state', convertServerGameToClientGame(game))
+  })
+
+ socket.on('request tiles unit can cast on', function(tile)
+  {
+    var game = findGameFromSocketID(socket.id)
+    var piece = game.board[tile.col][tile.row].piece
+
+    if (game == null)
+    {
+      io.to(socket.id).emit("new log message", "No such game")
+      return
+    }
+
+    if (game.phase != "Action")
+    {
+      io.to(socket.id).emit("new log message", "Wrong phase")
+      return      
+    }
+
+    if(!piece.isActive)
+    {
+      io.to(socket.id).emit("new log message", "Piece is inactive")
+      return       
+    }
+
+    var isRedPlayer = findIfPlayerIsRedPlayerInGameFromSocketID(game, socket.id)
+    var player = (isRedPlayer) ? game.redPlayer : game.bluePlayer
+
+    if (!findIfItsAPlayersTurnInGame(isRedPlayer, game))
+    {
+      io.to(socket.id).emit("new log message", "Not your turn")
+      return  
+    }
+
+    var castableTiles = piece.getTilesThatUnitSpellCanBeCastOn(game, tile)
+    io.to(socket.id).emit('new active tiles', castableTiles) 
+  })
+
   socket.on('request tiles which can be cast on', function(inventoryPosition)
   {
     var game = findGameFromSocketID(socket.id)
@@ -216,6 +311,12 @@ io.on('connection', function(socket)
       return        
     }
 
+    if(!gameTile.piece.isActive)
+    {
+      io.to(socket.id).emit("new log message", "Piece is inactive")
+      return       
+    }
+
     var attackableTiles = gamePiece.getAttackableTiles(game, gameTile)
     io.to(socket.id).emit('new active tiles', attackableTiles) 
   })
@@ -265,12 +366,13 @@ io.on('connection', function(socket)
       return              
     }
 
-    attackerPiece.attack(game, victimPiece)
+    if(!attackerPiece.isActive)
+    {
+      io.to(socket.id).emit("new log message", "Piece is inactive")
+      return       
+    }
 
-    if (attackerPiece.health <= 0)
-      attackerPiece.die(game, gameAttackerTile, victimPiece)
-    if (victimPiece.health <= 0)
-      victimPiece.die(game, gameVictimTile, attackerPiece)
+    attackerPiece.attack(game, victimPiece, gameAttackerTile, gameVictimTile)
 
     io.to(game.host).emit('new game state', convertServerGameToClientGame(game))
   })
@@ -348,14 +450,29 @@ io.on('connection', function(socket)
     }
 
     if (piece.isFlat)
-      tileToBuildOn.flatPiece = piece      
+      tileToBuildOn.flatPiece = piece
     else
       tileToBuildOn.piece = piece
+
+    piece.canReceiveFreeEnergyAtThisLocation = piece.canReceiveFreeEnergyAtTile(game, tileToBuildOn)
 
     if ("addReactionsWhenBuilt" in piece)
       piece.addReactionsWhenBuilt(game, tileToBuildOn)
 
-    //run piece on build effects
+    if (piece.types.includes("Conduit"))
+    {
+      for (var tile of game.getAllTilesInListForm())
+      {
+        if(tile.piece != null)
+        {
+          tile.piece.canReceiveFreeEnergyAtThisLocation = tile.piece.canReceiveFreeEnergyAtTile(game, tile)          
+        }
+        if(tile.flatPiece != null)
+        {
+          tile.flatPiece.canReceiveFreeEnergyAtThisLocation = tile.flatPiece.canReceiveFreeEnergyAtTile(game, tile)                    
+        }
+      }
+    }
 
     player.inventory[inventoryPosition] = null
 
@@ -393,6 +510,12 @@ io.on('connection', function(socket)
     {
       io.to(socket.id).emit("new log message", "You don't own that piece!")
       return        
+    }
+
+    if(!gameTile.piece.isActive)
+    {
+      io.to(socket.id).emit("new log message", "Piece is inactive")
+      return       
     }
 
     var tilesThatCanBeMovedToAndThePathThere = gamePiece.getTilesWhichCanBeMovedToAndThePathThere(game, gameTile)
@@ -441,6 +564,12 @@ io.on('connection', function(socket)
     {
       io.to(socket.id).emit("new log message", "You don't own that piece!")
       return        
+    }
+
+    if(!fTile.piece.isActive)
+    {
+      io.to(socket.id).emit("new log message", "Piece is inactive")
+      return       
     }
 
     var fromTile = game.board[fTile.col][fTile.row]
@@ -604,6 +733,7 @@ io.on('connection', function(socket)
     var activePlayer = (isRedPlayer) ? game.redPlayer : game.bluePlayer
 
     //collection
+    activatePieces(game, isRedPlayer)
     activePlayer.goldProduction = countGoldProductionForPlayer(game, isRedPlayer)
     activePlayer.gold += activePlayer.goldProduction
     activePlayer.energyCapacity = countEnergyCapacityProductionForPlayer(game, isRedPlayer)
@@ -651,6 +781,17 @@ io.on('connection', function(socket)
     }  
   }
 
+  function activatePieces(game, isRedPlayer)
+  {
+    for (tile of game.getAllTilesInListForm())
+    {
+      if(tile.piece != null && findIfAPlayerOwnsAPiece(isRedPlayer, tile.piece) && tile.piece.energy > 0)
+        tile.piece.isActive = true
+      if(tile.flatPiece != null && findIfAPlayerOwnsAPiece(isRedPlayer, tile.flatPiece) && tile.flatPiece.energy > 0)
+        tile.flatPiece.isActive = true      
+    }      
+  }
+
   function updatePlatformOwnership(game)
   {
     for (platformTile of game.getVPTokenTiles)
@@ -671,9 +812,9 @@ io.on('connection', function(socket)
     var totalGoldProduction = 0
     for (tile of game.getAllTilesInListForm())
     {
-      if(tile.piece != null && findIfAPlayerOwnsAPiece(isRedPlayer, tile.piece) && tile.piece.goldProduction != null)
+      if(tile.piece != null && findIfAPlayerOwnsAPiece(isRedPlayer, tile.piece) && tile.piece.goldProduction != null && tile.piece.isActive)
         totalGoldProduction += tile.piece.goldProduction
-      if(tile.flatPiece != null && findIfAPlayerOwnsAPiece(isRedPlayer, tile.flatPiece) && tile.flatPiece.goldProduction != null)
+      if(tile.flatPiece != null && findIfAPlayerOwnsAPiece(isRedPlayer, tile.flatPiece) && tile.flatPiece.goldProduction != null && tile.flatPiece.isActive)
         totalGoldProduction += tile.flatPiece.goldProduction
     }
     return totalGoldProduction
@@ -685,9 +826,9 @@ io.on('connection', function(socket)
     for (tile of game.getAllTilesInListForm())
     {
       var potentialVPTokensFromTile = findHowManyVPTokensTileProduces(tile)
-      if(tile.piece != null && potentialVPTokensFromTile != 0 && findIfAPlayerOwnsAPiece(isRedPlayer, tile.piece) && tile.piece.victoryPointTokenProduction != null)
+      if(tile.piece != null && potentialVPTokensFromTile != 0 && findIfAPlayerOwnsAPiece(isRedPlayer, tile.piece) && tile.piece.victoryPointTokenProduction != null && tile.piece.isActive)
         totalVictoryPointTokenProduction += tile.piece.victoryPointTokenProduction*potentialVPTokensFromTile
-      if(tile.flatPiece != null && potentialVPTokensFromTile != 0 && findIfAPlayerOwnsAPiece(isRedPlayer, tile.flatPiece) && tile.flatPiece.victoryPointTokenProduction != null)
+      if(tile.flatPiece != null && potentialVPTokensFromTile != 0 && findIfAPlayerOwnsAPiece(isRedPlayer, tile.flatPiece) && tile.flatPiece.victoryPointTokenProduction != null && tile.flatPiece.isActive)
         totalVictoryPointTokenProduction += tile.flatPiece.victoryPointTokenProduction*potentialVPTokensFromTile
     }
     return totalVictoryPointTokenProduction    
@@ -698,9 +839,9 @@ io.on('connection', function(socket)
     var totalEnergyCapacityProduction = 0
     for (tile of game.getAllTilesInListForm())
     {
-      if(tile.piece != null && findIfAPlayerOwnsAPiece(isRedPlayer, tile.piece) && tile.piece.energyCapacityProduction != null)
+      if(tile.piece != null && findIfAPlayerOwnsAPiece(isRedPlayer, tile.piece) && tile.piece.energyCapacityProduction != null && tile.piece.isActive)
         totalEnergyCapacityProduction += tile.piece.energyCapacityProduction
-      if(tile.flatPiece != null && findIfAPlayerOwnsAPiece(isRedPlayer, tile.flatPiece) && tile.flatPiece.energyCapacityProduction != null)
+      if(tile.flatPiece != null && findIfAPlayerOwnsAPiece(isRedPlayer, tile.flatPiece) && tile.flatPiece.energyCapacityProduction != null && tile.flatPiece.isActive)
         totalEnergyCapacityProduction += tile.flatPiece.energyCapacityProduction
     }
     return totalEnergyCapacityProduction    
@@ -763,16 +904,24 @@ io.on('connection', function(socket)
       {
         board[col][12].piece = _.cloneDeep(pieces.buildings['Small Gold Farm'])
         board[col][12].piece.owner = "Blue"
+        board[col][12].piece.canReceiveFreeEnergyAtThisLocation = true
         board[col][2].piece = new _.cloneDeep(pieces.buildings['Small Gold Farm'])
         board[col][2].piece.owner = "Red"
+        board[col][2].piece.canReceiveFreeEnergyAtThisLocation = true
+
       }
 
       for (var col = 3; col < 6; col++)
       {
           board[col][14].piece = new _.cloneDeep(pieces.buildings['Small Energy Farm'])
           board[col][14].piece.owner = "Blue"
+          board[col][14].piece.canReceiveFreeEnergyAtThisLocation = true
+          board[col][14].piece.isActive = true
           board[col][0].piece = new _.cloneDeep(pieces.buildings['Small Energy Farm'])
           board[col][0].piece.owner = "Red"
+          board[col][0].piece.canReceiveFreeEnergyAtThisLocation = true
+          board[col][0].piece.isActive = true
+
       }
 
       var newGame =   
@@ -800,17 +949,17 @@ io.on('connection', function(socket)
 
         getVPTokenTiles: function()
         {
-          var platformTiles = []
-          platformTiles.push(board[2][5])
-          platformTiles.push(board[4][5])
-          platformTiles.push(board[6][5])
-          platformTiles.push(board[2][7])
-          platformTiles.push(board[4][7])
-          platformTiles.push(board[6][7])
-          platformTiles.push(board[2][9])
-          platformTiles.push(board[4][9])
-          platformTiles.push(board[6][9])          
-          return platformTiles     
+          var vpTokenTiles = []
+          vpTokenTiles.push(board[2][5])
+          vpTokenTiles.push(board[4][5])
+          vpTokenTiles.push(board[6][5])
+          vpTokenTiles.push(board[2][7])
+          vpTokenTiles.push(board[4][7])
+          vpTokenTiles.push(board[6][7])
+          vpTokenTiles.push(board[2][9])
+          vpTokenTiles.push(board[4][9])
+          vpTokenTiles.push(board[6][9])          
+          return vpTokenTiles     
         },
 
         getBlueFriendlyTiles: function()
@@ -946,6 +1095,7 @@ const getMethods = (obj) => {
   } while ((currentObj = Object.getPrototypeOf(currentObj)))
   return [...properties.keys()].filter(item => typeof obj[item] === 'function')
 }
+
 
 function convertServerBoardToClientBoard(board)
 {
