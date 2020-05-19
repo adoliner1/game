@@ -459,20 +459,8 @@ io.on('connection', function(socket)
     if ("addReactionsWhenBuilt" in piece)
       piece.addReactionsWhenBuilt(game, tileToBuildOn)
 
-    if (piece.types.includes("Conduit"))
-    {
-      for (var tile of game.getAllTilesInListForm())
-      {
-        if(tile.piece != null)
-        {
-          tile.piece.canReceiveFreeEnergyAtThisLocation = tile.piece.canReceiveFreeEnergyAtTile(game, tile)          
-        }
-        if(tile.flatPiece != null)
-        {
-          tile.flatPiece.canReceiveFreeEnergyAtThisLocation = tile.flatPiece.canReceiveFreeEnergyAtTile(game, tile)                    
-        }
-      }
-    }
+    if ("performOnBuildEffects" in piece)
+      piece.performOnBuildEffects(game, tileToBuildOn)
 
     player.inventory[inventoryPosition] = null
 
@@ -639,8 +627,7 @@ io.on('connection', function(socket)
       return             
     }
 
-    energizeTile.piece.increaseEnergy()
-    player.activeEnergy ++
+    energizeTile.piece.increaseEnergy(game, energizeTile)
 
     io.to(game.host).emit('new game state', convertServerGameToClientGame(game))     
   })
@@ -738,8 +725,19 @@ io.on('connection', function(socket)
     activePlayer.gold += activePlayer.goldProduction
     activePlayer.energyCapacity = countEnergyCapacityProductionForPlayer(game, isRedPlayer)
     activePlayer.victoryPointTokenProduction = countVictoryPointTokenProductionForPlayer(game, isRedPlayer)
+
+    //end turn effects
     restoreMovementForPlayersPieces(game, isRedPlayer)
 
+    for (var tile of game.getAllTilesInListForm())
+    {
+      var piece = tile.piece
+      var flatPiece = tile.flatPiece
+      if (tile.piece != null && "performEndTurnEffects" in tile.piece && tile.piece.isActive)
+    }
+  
+if ("performOnBuildEffects" in piece)
+    //check for end of game
     if (game.victoryPointTokenSupply < activePlayer.victoryPointTokenProduction)
     {
       activePlayer.victoryPoints += game.victoryPointTokenSupply
@@ -788,8 +786,23 @@ io.on('connection', function(socket)
       if(tile.piece != null && findIfAPlayerOwnsAPiece(isRedPlayer, tile.piece) && tile.piece.energy > 0)
         tile.piece.isActive = true
       if(tile.flatPiece != null && findIfAPlayerOwnsAPiece(isRedPlayer, tile.flatPiece) && tile.flatPiece.energy > 0)
-        tile.flatPiece.isActive = true      
-    }      
+        tile.flatPiece.isActive = true
+    }
+  }
+
+  function updateCanReceiveFreeEnergies(game)
+  {
+    for (var tile of game.getAllTilesInListForm())
+    {
+      if(tile.piece != null)
+      {
+        tile.piece.canReceiveFreeEnergyAtThisLocation = tile.piece.canReceiveFreeEnergyAtTile(game, tile)          
+      }
+      if(tile.flatPiece != null)
+      {
+        tile.flatPiece.canReceiveFreeEnergyAtThisLocation = tile.flatPiece.canReceiveFreeEnergyAtTile(game, tile)                    
+      }
+    }    
   }
 
   function updatePlatformOwnership(game)

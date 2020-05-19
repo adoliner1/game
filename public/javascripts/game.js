@@ -5,12 +5,11 @@ const endOfRedTiles = 3
 const startOfBlueTiles = 12
 const endOfBlueTiles = 15
 
-
 $(function () 
 {
 	//globals
 	var socket = io()
-	window.actionButtons = [($('#castUnitSpellOnPieceButton')), ($('#castUnitSpellButton')), ($('#buyButton')),($('#buildButton')),($('#moveButton')),($('#energizeButton')),($('#activateButton')),($('#castButton')),($('#attackButton')),($('#attackPieceButton')),($('#attackFlatPieceButton')), ($('#castOnFlatPieceButton')), ($('#castOnPieceButton'))]
+	window.actionButtons = [($('#castUnitSpellOnFlatPieceButton')), ($('#castUnitSpellOnPieceButton')), ($('#castUnitSpellButton')), ($('#buyButton')),($('#buildButton')),($('#moveButton')),($('#energizeButton')),($('#activateButton')),($('#castButton')),($('#attackButton')),($('#attackPieceButton')),($('#attackFlatPieceButton')), ($('#castOnFlatPieceButton')), ($('#castOnPieceButton'))]
 	window.allButtons = [($('#endTurnButton')), ($('#endActionPhaseButton'))].concat(actionButtons)
 
 	//tiles which can currently be acted on(moved to, attacked, casted on, built on)
@@ -141,8 +140,11 @@ $(function ()
 		$('#stores td').click(function storeTileClicked()
 		{
 			disableAllActionButtons()
+			unhighlightBordersOfAllCurrentlyHighlightedDOMObjects()
 			var parentShop = this.closest('table')
 			var index = this.cellIndex
+			window.currentlyClickedStoreTileDOM = $(this)
+			highlightBordersOfDOMObject(currentlyClickedStoreTileDOM)
 
 			if (parentShop.id == 'buildings')
 				currentlySelectedStorePiece = game.buildings[index]
@@ -162,6 +164,10 @@ $(function ()
 	$('.inventory td').click(function tileClicked()
 	{
 		disableAllActionButtons()
+		unhighlightBordersOfAllCurrentlyHighlightedDOMObjects()
+		window.currentlySelectedInventoryDOM = $(this)
+		highlightBordersOfDOMObject(currentlySelectedInventoryDOM)
+		console.log(currentlySelectedInventoryDOM)
 		var clickedInventoryTile = this	
 		if ((clickedInventoryTile.closest('table').id) == 'redInventory')
 		{
@@ -189,10 +195,12 @@ $(function ()
 	$('#board td').click(function tileClicked()
 	{
 		disableAllActionButtons()
+		unhighlightBordersOfAllCurrentlyHighlightedDOMObjects()
 		var clickedDOMTableElement = this
 		var xpos = clickedDOMTableElement.cellIndex
 		var ypos = clickedDOMTableElement.parentNode.rowIndex
 		currentlySelectedTile = game.board[xpos][ypos]
+		highlightBordersOfDOMObject(getDOMForTile(currentlySelectedTile))
 
 		if (activeTiles.includes(currentlySelectedTile) && game.phase == "Action")
 		{
@@ -319,14 +327,6 @@ $(function ()
 		socket.emit('request tiles which can be built on', currentInventoryPosition)
 	})
 
-	$('#castUnitSpellButton').submit(function(e)
-	{
-		disableAllActionButtons()
-		e.preventDefault()
-		unitCastMode = true
-		socket.emit('request tiles unit can cast on', tilePieceIsPotentiallyCastingSpellFrom)
-	})
-
 	$('#moveButton').submit(function(e)
 	{
 		disableAllActionButtons()
@@ -371,19 +371,28 @@ $(function ()
 		socket.emit('request to attack a piece', tilePieceIsPotentiallyAttackingFrom,  currentlySelectedTile, true)
     })
 
+	$('#castUnitSpellButton').submit(function(e)
+	{
+		disableAllActionButtons()
+		e.preventDefault()
+		unitCastMode = true
+		socket.emit('request tiles unit can cast on', tilePieceIsPotentiallyCastingSpellFrom)
+	})
+
+	$('#castUnitSpellOnPieceButton').submit(function(e)
+	{
+		disableAllActionButtons()
+		e.preventDefault()
+		socket.emit('request to cast a unit spell', tilePieceIsPotentiallyCastingSpellFrom, currentlySelectedTile, "Piece")
+
+    })
+
 	$('#castUnitSpellOnFlatPieceButton').submit(function(e)
 	{
 		disableAllActionButtons()
 		e.preventDefault()
 		socket.emit('request to cast a unit spell', tilePieceIsPotentiallyCastingSpellFrom, currentlySelectedTile, "Flat Piece")
 
-    })
-
-    $('#castUnitSpellButton').submit(function(e)
-	{
-		disableAllActionButtons()
-		e.preventDefault()
-		socket.emit('request to cast a unit spell', tilePieceIsPotentiallyCastingSpellFrom, currentlySelectedTile, "Piece")
     })
 
 	$('#castOnFlatPieceButton').submit(function(e)
@@ -411,8 +420,17 @@ $(function ()
     })
 });
 
+function unhighlightBordersOfAllCurrentlyHighlightedDOMObjects()
+{
+	unhighlightBordersOfPlayerInventoryDOMObject(window.currentlySelectedInventoryDOM)
+	unhighlightBordersOfStoreDOMObject(window.currentlyClickedStoreTileDOM)
+	unhighlightBordersOfTile(window.currentlySelectedTile)
+}
+
 function getDOMForTile(tile)
 {
+	if (tile == null)
+		return null
 	return $($("#board tbody")[0].rows[tile.row].cells[tile.col])
 }
 
@@ -454,6 +472,49 @@ function updatePlayerResourcesDOM(isRedPlayer, player)
 		$('#bluePlayerResources p.gold').html(goldDisplay)
 		$('#bluePlayerResources p.energy').html(energyDisplay)
 		$('#bluePlayerResources p.vp').html(victoryPointDisplay)
+	}
+}
+
+function highlightBordersOfDOMObject(DOMObject)
+{
+	if (DOMObject != null)
+		DOMObject.css("border", "2px solid #ffaa00")
+}
+
+function unhighlightBordersOfTile(tile)
+{
+	if (tile != null)
+	{
+		var DOMObject = getDOMForTile(tile)
+			DOMObject.css("border", "2px solid #606060")
+			if (tile.statuses.includes("VP1") || tile.statuses.includes("VP2") || tile.statuses.includes("VP3"))
+				DOMObject.css('border', '2px solid #75f542')
+	}
+}
+
+function unhighlightBordersOfStoreDOMObject(storeDOMObject)
+{
+	if (storeDOMObject != null)
+	{
+		var parentShop = storeDOMObject.closest('table')[0]
+		if (parentShop.id == 'buildings')
+			storeDOMObject.css("border", "1px solid #6b6b47")
+		else if (parentShop.id == 'units')
+			storeDOMObject.css("border", "1px solid #000080")
+		else if (parentShop.id == 'spells')
+			storeDOMObject.css("border", "1px solid #8f246b")
+	}
+}
+
+function unhighlightBordersOfPlayerInventoryDOMObject(inventoryDOMObject)
+{
+	if (inventoryDOMObject != null)
+	{
+		var inventory = inventoryDOMObject.closest('table')
+		if (inventory.id == 'redInventory')
+			inventoryDOMObject.css("border", "1px solid #cc0000")
+		else
+			inventoryDOMObject.css("border", "1px solid #0000b3")
 	}
 }
 
@@ -587,7 +648,7 @@ function outlineVPSquares(board)
 		{
 			var DOMObject = getDOMForTile(tile)
 			if (tile.statuses.includes("VP1") || tile.statuses.includes("VP2") || tile.statuses.includes("VP3"))
-				DOMObject.css('border', 'solid #449c35')				
+				DOMObject.css('border', '2px solid #75f542')				
 		}
 	}
 }

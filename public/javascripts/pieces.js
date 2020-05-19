@@ -41,25 +41,130 @@ class Surge extends Spell
 
   cast(game, target)
   {
-    target.increaseEnergy()
-
-    if(this.owner == "Blue")
-      game.bluePlayer.activeEnergy ++
-    else
-      game.redPlayer.activeEnergy ++ 
+    target.increaseEnergy(game, pieceTile)
   }
 }
 
 var surge = new Surge
 spells[surge.name] = surge
 
+
+class Empower extends Spell
+{
+  constructor()
+  {
+    super("Empower", "+1 strength to a friendly piece", ["Spell"], 3, "EM", "Piece")
+  }
+
+  getTilesWhichCanBeCastOn(game)
+  {
+    if (this.owner == "Red")
+      var isRedPlayer = true
+    else
+      var isRedPlayer = false
+    return getTilesWithAFriendlyPiece(isRedPlayer, game.getAllTilesInListForm())
+  }
+
+  cast(game, target)
+  {
+    target.strength = target.strength + 1
+  }
+}
+
+var empower = new Empower
+spells[empower.name] = empower
+
+class Accelerate extends Spell
+{
+  constructor()
+  {
+    super("Accelerate", "+2 movement to a friendly piece whose movement capacity is greater than 0", ["Spell"], 3, "AC", "Piece")
+  }
+
+  getTilesWhichCanBeCastOn(game)
+  {
+    return getTilesWithPiecesWithMovementCapacityHigherThanZero(getTilesWithAFriendlyPiece(isRedPlayer, game.getAllTilesInListForm()))
+  }
+
+  cast(game, target)
+  {
+    target.increaseMovement(2)
+  }
+}
+
+var accelerate = new Accelerate
+spells[accelerate.name] = accelerate
+
+class QuickFoot extends Spell
+{
+  constructor()
+  {
+    super("Quick Foot", "+1 movement capacity to a friendly piece whose movement capacity is greater than 0", ["Spell"], 5, "QF", "Piece")
+  }
+
+  getTilesWhichCanBeCastOn(game)
+  {
+    return getTilesWithPiecesWithMovementCapacityHigherThanZero(getTilesWithAFriendlyPiece(isRedPlayer, game.getAllTilesInListForm()))
+  }
+
+  cast(game, target)
+  {
+    target.movementCapacity = target.movementCapacity + 1
+  }
+}
+
+var quickFoot = new QuickFoot
+spells[quickFoot.name] = quickFoot
+
+class LittleMissle extends Spell
+{
+  constructor()
+  {
+    super("Little Missle", "deal 1 damage to a unit within range of a friendly caster", ["Spell"], 3, "LM", "Piece")
+  }
+
+  getTilesWhichCanBeCastOn(game)
+  {
+    return getTilesWithAPiece(getTilesInRangeOfAFriendlyCaster(game, this.owner))
+  }
+
+  cast(game, target)
+  {
+    target.takeDamage(game, null, 1, null, null)
+  }
+}
+
+var littleMissle = new LittleMissle
+spells[littleMissle.name] = littleMissle
+
+class Upgrade extends Spell
+{
+  constructor()
+  {
+    super("Upgrade", "destroy a friendly piece. gain a piece sharing a type that costs one more", ["Spell"], 2, "RP", "Piece")
+  }
+
+  getTilesWhichCanBeCastOn(game)
+  {
+    return getTilesWithAPiece(game.getAllTilesInListForm())
+  }
+
+  cast(game, target)
+  {
+    target.takeDamage(game, null, 1, null, null)
+  }
+}
+
+var littleMissle = new LittleMissle
+spells[littleMissle.name] = littleMissle
+
+
 class Piece
 {
-  constructor(name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, healthCapacity, attackRange, isFlat, canAttack)
+  constructor(name, description, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, healthCapacity, attackRange, isFlat, canAttack)
   {
     this.name = name;
     this.description = description
-    this.owner = owner;
     this.boardAvatar = boardAvatar;
     this.types = types;
     this.cost = cost;
@@ -75,6 +180,17 @@ class Piece
     this.canAttack = canAttack
     this.canReceiveFreeEnergyAtThisLocation = false
     this.isActive = false
+    this.statuses = []
+  }
+
+  activate(game, pieceTile)
+  {
+    this.isActive = true
+  }
+
+  deactivate(game, pieceTile)
+  {
+    this.isActive = false
   }
 
   canReceiveFreeEnergyAtTile(game, tile)
@@ -82,7 +198,7 @@ class Piece
     if ((this.owner == "Red" && tile.row < 3) || (this.owner == "Blue" && tile.row > 11))
       return true
     return isInRangeOfFriendlyConduit(game, this.owner, tile)
-  }  
+  }
 
   getAttackableTiles(game, pieceLocation)
   {
@@ -151,33 +267,46 @@ class Piece
       this.health = this.healthCapacity
   }
 
-  increaseEnergy()
+  increaseEnergy(game, pieceTile)
   {
     if (this.energy < this.energyCapacity)
+    {
       this.energy += 1
-
-    if(this.energy > 0)
-      this.isActive = true
+      if (this.owner == "Red")
+        game.redPlayer.activeEnergy ++
+      else
+        game.bluePlayer.activeEnergy ++
+    }
   }
 
-  reduceEnergy()
+  reduceEnergy(game, pieceTile)
   {
     if(this.energy != 0)
+    {
       this.energy -= 1
+      if (this.owner == "Red")
+        game.redPlayer.activeEnergy --
+      else
+        game.bluePlayer.activeEnergy --
+    }
     if(this.energy == 0)
-      this.isActive = false
+      this.deactivate(game, pieceTile)
   }
 
-  increaseMovement()
+  increaseMovement(amount)
   {
-    if (this.movement < this.movementCapacity)
-      this.movement += 1
+    if (this.movement  + amount <= this.movementCapacity)
+      this.movement += amount
+    else
+      this.movement = this.movementCapacity
   }
 
-  decreaseMovement()
+  decreaseMovement(amount)
   {
-    if (this.movement != 0)
-      this.movement -= 1
+    if (this.movement - amount >= 0)
+      this.movement -= amount
+    else
+      this.movement = 0
   }
 
   attack(game, victim, attackerTile, victimTile)
@@ -213,13 +342,13 @@ class MovementPad extends Piece
 {
   constructor()
   {
-    super("Movement Pad", "when a friendly piece moves on to this it gets +1 movement", "", "MP", ["Building"], 3, 1, 0, 0, 1, 0, true, false)    
+    super("Movement Pad", "when a friendly piece moves on to this it gets +1 movement", "MP", ["Building"], 3, 1, 0, 0, 1, 0, true, false)    
   }
 
   react(game, pieceThatTriggeredReaction, tileReactionTriggeredFrom)
   {
     if (this.owner == pieceThatTriggeredReaction.owner && this.energy != 0)
-      pieceThatTriggeredReaction.increaseMovement()
+      pieceThatTriggeredReaction.increaseMovement(1)
   }
 
   addReactionsWhenBuilt(game, tileBuiltOn)
@@ -238,30 +367,23 @@ class Archer extends Piece
 {
   constructor()
   {
-    super("Archer", "+1 energy = +1 strength -- can't shoot through non-flat pieces.", "", "AR", ["Unit"], 4, 2, 0, 0, 1, 3, false, true)
+    super("Archer", "+1 energy = +1 strength -- can't shoot through non-flat pieces.", "AR", ["Unit"], 4, 2, 0, 1, 1, 2, false, true)
   }
 
-  increaseEnergy()
+  increaseEnergy(game, pieceTile)
   {
-    if (this.energy < this.energyCapacity)
-    {
-      this.energy += 1
+    var oldEnergy = this.energy
+    super.increaseEnergy(game, pieceTile)
+    if (this.energy > oldEnergy)
       this.strength += 1
-      this.movementCapacity = 1
-      this.movement = 1
-    }
   }
 
-  reduceEnergy()
+  reduceEnergy(game, pieceTile)
   {
-    if (this.energy != 0)
-    {
-      this.energy -= 1
+    var oldEnergy = this.energy
+    super.reduceEnergy(game, pieceTile)
+    if (this.energy < oldEnergy)
       this.strength -= 1
-    }
-    if (this.energy == 0)
-      this.movementCapacity = 0 
-      this.movement = 0
   }
 
   getAttackableTiles(game, pieceLocation)
@@ -278,8 +400,8 @@ class PowerPriest extends Piece
 {
   constructor()
   {
-    super("Power Priest", "unit spell: a friendly unit in an adjacent tile gets +2 health. reduce this piece's energy by 1", "", "PP", ["Unit", "Conduit"], 4, 1, 0, 1, 1, 0, false, false)
-    this.distributionRange = 1
+    super("Power Priest", "unit spell: a friendly unit in an adjacent tile gets +2 health. reduce this piece's energy by 1", "PP", ["Unit", "Conduit"], 4, 1, 0, 1, 1, 0, false, false)
+    this.energyDistributionRange = 1
     this.hasUnitSpells = true
     this.spellTarget = "Piece"
   }
@@ -290,10 +412,22 @@ class PowerPriest extends Piece
     return getTilesWithAFriendlyPiece(isRedPlayer, getAdjacentTiles(game.board, tile))
   }
 
+  activate(game, pieceTile)
+  {
+    this.isActive = true
+    updatePiecesWhichCanReceiveFreeEnergy(game)
+  }
+
+  deactivate(game, pieceTile)
+  {
+    this.isActive = false
+    updatePiecesWhichCanReceiveFreeEnergy(game)
+  }
+
   castSpell(game, target)
   {
     target.increaseHealth(2)
-    this.reduceEnergy()
+    this.reduceEnergy(game, pieceTile)
 
     if(target.owner == "Blue")
       game.bluePlayer.activeEnergy --
@@ -306,20 +440,63 @@ var powerPriest = new PowerPriest
 units[powerPriest.name] = powerPriest
 
 //name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, health, attackRange, isFlat, canAttack)
+class ElectricWiz extends Piece
+{
+  constructor()
+  {
+    super("Electric Wiz", "unit spell: deal 1 damage to a target within 2 tiles. reduce this pieces energy by 1", "EW", ["Unit", "Caster"], 4, 1, 0, 1, 1, 0, false, false)
+    this.castingRange = 1
+    this.hasUnitSpells = true
+    this.spellTarget = "Piece"
+  }
 
+  getTilesThatUnitSpellCanBeCastOn(game, tile)
+  {
+    return getTilesWithAPiece(getTilesWithinRangeOfTile(game.getAllTilesInListForm(), tile, 2))
+  }
+
+  castSpell(game, target)
+  {
+    target.takeDamage(game, this, 2, null, null)
+
+    this.reduceEnergy(game, pieceTile)
+
+    if(target.owner == "Blue")
+      game.bluePlayer.activeEnergy --
+    else
+      game.redPlayer.activeEnergy -- 
+  }
+}
+
+var electricWiz = new ElectricWiz
+units[electricWiz.name] = electricWiz
+
+
+//name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, health, attackRange, isFlat, canAttack)
 
 class EnergyTower extends Piece
 {
   constructor()
   {
-    super("Energy Tower", "distribution range = 2", "", "ET", ["Building", "Conduit"], 4, 1, 0, 0, 4, 0, false, false)
-    this.distributionRange = 2
+    super("Energy Tower", "distribution range = 2", "ET", ["Building", "Conduit"], 4, 1, 0, 0, 4, 0, false, false)
+    this.energyDistributionRange = 2
+  }
+
+  activate(game, pieceTile)
+  {
+    this.isActive = true
+    updatePiecesWhichCanReceiveFreeEnergy(game)
+  }
+
+  deactivate(game, pieceTile)
+  {
+    this.isActive = false
+    updatePiecesWhichCanReceiveFreeEnergy(game)
   }
 }
 
 var energyTower = new EnergyTower
 buildings[energyTower.name] = energyTower
-
 
 //name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, health, attackRange, isFlat, canAttack)
 
@@ -327,30 +504,26 @@ class Hopper extends Piece
 {
   constructor()
   {
-    super("Hopper", "+1 energy = +2 movement capacity -- this unit moves 2 squares at a time hops over the first square. if it hops over an enemy piece, that piece takes 3 damage", "", "HP", ["Unit"], 5, 2, 0, 0, 2, 0, false, false)
+    super("Hopper", "+1 energy = +1 movement capacity -- this unit moves 2 squares at a time and hops over the first square. if it hops over an enemy piece, that piece takes 3 damage", "HP", ["Unit"], 5, 4, 0, 0, 2, 0, false, false)
   }  
-  increaseEnergy()
+
+  increaseEnergy(game, pieceTile)
   {
     if (this.energy < this.energyCapacity)
     {
-      this.energy += 1
-      this.movementCapacity = 2*this.energy
+      var oldEnergy = this.energy
+      super.increaseEnergy(game, pieceTile)
+      if (this.energy > oldEnergy)
+        this.movementCapacity += 1
     }
   }
 
-  reduceEnergy()
+  reduceEnergy(game, pieceTile)
   {
-    if (this.energy != 0)
-    {
-      this.energy -= 1
-      if(this.movementCapacity >= 2)
-        this.movementCapacity = this.movementCapacity - 2
-      else
-        this.movementCapacity = 0
-    }
-
-    if (this.energy == 0)
-      this.movementCapacity = 0 
+    var oldEnergy = this.energy
+    super.reduceEnergy(game, pieceTile)
+    if (this.energy < oldEnergy)
+      this.movementCapacity -= 1
   }
 
   getTilesWhichCanBeMovedToAndThePathThere(game, fromTile)
@@ -412,30 +585,23 @@ class AttackDrone extends Piece
 {
   constructor()
   {
-    super("Attack Drone", "+1 energy = +1 strength -- movement = 1 if energy != 0", "", "AD", ["Unit"], 3, 2, 0, 0, 2, 1, false, true)
+    super("Attack Drone", "+1 energy = +1 strength", "AD", ["Unit"], 3, 2, 0, 1, 1, 1, false, true)
   }
 
-  increaseEnergy()
+  increaseEnergy(game, pieceTile)
   {
-    if (this.energy < this.energyCapacity)
-    {
-      this.energy += 1
+    var oldEnergy = this.energy
+    super.increaseEnergy(game, pieceTile)
+    if (this.energy > oldEnergy)
       this.strength += 1
-      this.movementCapacity = 1
-      this.movement = 1
-    }
   }
 
-  reduceEnergy()
+  reduceEnergy(game, pieceTile)
   {
-    if (this.energy != 0)
-    {
-      this.energy -= 1
+    var oldEnergy = this.energy
+    super.reduceEnergy(game, pieceTile)
+    if (this.energy < oldEnergy)
       this.strength -= 1
-    }
-    if (this.energy == 0)
-      this.movementCapacity = 0 
-      this.movement = 0
   }
 }
 
@@ -446,27 +612,7 @@ class BuilderDrone extends Piece
 {
   constructor()
   {
-    super("Builder Drone", "+1 energy = +1 movement, if energy != 0 pieces can be built on adjacent tiles", "", "BD", ["Unit", "Builder"], 2, 2, 0, 0, 1, 0, false, false)
-  }
-
-  increaseEnergy()
-  {
-    if (this.energy < this.energyCapacity)
-    {
-      this.energy += 1
-      this.movementCapacity += 5
-      this.movement += 5
-    }
-  }
-
-  reduceEnergy()
-  {
-    if (this.energy != 0)
-    {
-      this.energy -= 1
-      this.movementCapacity -= 1
-      this.movement -= 1
-    }
+    super("Builder Drone", "builder", "BD", ["Unit", "Builder"], 2, 1, 0, 5, 1, 0, false, false)
   }
 }
 
@@ -479,29 +625,7 @@ class Drainer extends Piece
 {
   constructor()
   {
-    super("Drainer", "if energy != 0, +2 movement +1 strength, and this units attacks reduce the victims energy by 1", "", "DR", ["Unit"], 5, 1, 0, 0, 2, 1, false, true)
-  }
-
-  increaseEnergy()
-  {
-    if (this.energy < this.energyCapacity)
-    {
-      this.energy += 1
-      this.movementCapacity = 2
-      this.strength = 1
-      this.movement = 2
-    }
-  }
-
-  reduceEnergy()
-  {
-    if (this.energy != 0)
-    {
-      this.energy -= 1
-      this.movementCapacity = 0
-      this.strength = 0
-      this.movement = 0
-    }
+    super("Drainer", "this units attacks reduce the victims energy by 1", "DR", ["Unit"], 5, 1, 1, 2, 2, 1, false, true)
   }
 
   attack(game, victim, attackerTile, victimTile)
@@ -509,8 +633,8 @@ class Drainer extends Piece
     this.isActive = false
     victim.takeDamage(game, this, this.strength, attackerTile, victimTile)
     if(this.energy > 0)
-      victim.reduceEnergy(1)
-    if (victim != null)
+      victim.reduceEnergy(game, victimTile)
+    if (victim != null && victim.isActive)
       victim.respondToAttack(game, this, attackerTile, victimTile)
   }
 }
@@ -518,21 +642,119 @@ class Drainer extends Piece
 var drainer = new Drainer
 units[drainer.name] = drainer
 
+//name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, health, attackRange, isFlat, canAttack
+class MagicPowerTower extends Piece
+{
+  constructor()
+  {
+    super("Magic Power Tower", "casting range = 2, energy distribution range = 2", "MPT", ["Building, Caster, Conduit"], 6, 1, 0, 0, 6, 0, false, false)
+    this.castingRange = 2
+    this.energyDistributionRange = 2
+  }
+
+  activate(game, pieceTile)
+  {
+    this.isActive = true
+    updatePiecesWhichCanReceiveFreeEnergy(game)
+  }
+
+  deactivate(game, pieceTile)
+  {
+    this.isActive = false
+    updatePiecesWhichCanReceiveFreeEnergy(game)
+  }
+}
+
+var magicPowerTower = new MagicPowerTower
+units[magicPowerTower.name] = magicPowerTower
+
+class PowerHut extends Piece
+{
+  constructor()
+  {
+    super("Power Hut", "when this piece is built its energy production is set based on its distance from your back wall. distance of 1-3 rows: 1, 4-5: 2, 6: 3, 7: 4, >7: 5", "PH", ["Building"], 5, 1, 0, 0, 3, 0, false, false)
+  }
+
+  performOnBuildEffects(game, tileToBuildOn)
+  { 
+    if (this.owner == "Red")
+      var distanceFromBackWall = tileToBuildOn.row + 1
+    else
+      var distanceFromBackWall = boardLength - tileToBuildOn.row
+      
+    if (distanceFromBackWall <= 3)
+      this.energyCapacityProduction = 1
+    else if(distanceFromBackWall <= 5)
+      this.energyCapacityProduction = 2
+    else if (distanceFromBackWall == 6 )
+      this.energyCapacityProduction = 3
+    else if (distanceFromBackWall == 7)
+      this.energyCapacityProduction = 4
+    else
+      this.energyCapacityProduction = 5
+  }
+}
+
+//name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movement, health, attackRange, isFlat, canAttack
+
+var powerHut = new PowerHut
+buildings[powerHut.name] = powerHut
+
+class GoldHut extends Piece
+{
+  constructor()
+  {
+    super("Gold Hut", "when this piece is built its gold production is set based on its distance from your back wall. distance of 1-3 rows: 1, 4-5: 2, 6: 3, 7: 4, >7: 5", "GH", ["Building"], 5, 1, 0, 0, 3, 0, false, false)
+  }
+
+  performOnBuildEffects(game, tileToBuildOn)
+  { 
+    if (this.owner == "Red")
+      var distanceFromBackWall = tileToBuildOn.row + 1
+    else
+      var distanceFromBackWall = boardLength - tileToBuildOn.row
+      
+    if (distanceFromBackWall <= 3)
+      this.goldProduction = 1
+    else if(distanceFromBackWall <= 5)
+      this.goldProduction = 2
+    else if (distanceFromBackWall == 6 )
+      this.goldProduction = 3
+    else if (distanceFromBackWall == 7)
+      this.goldProduction = 4
+    else
+      this.goldProduction = 5
+  }
+}
+
+//name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movement, health, attackRange, isFlat, canAttack
+
+var goldHut = new GoldHut
+buildings[goldHut.name] = goldHut
+
+
 class SmallGoldFarm extends Piece
 {
   constructor()
   {
-    super("Small Gold Farm", "+1 energy = +1 gold production", "", "SGF", ["Building"], 1, 3, 0, 0, 3, 0, false, false)
+    super("Small Gold Farm", "+1 energy = +1 gold production", "SGF", ["Building"], 1, 3, 0, 0, 3, 0, false, false)
     this.goldProduction = 0
   }
 
-  increaseEnergy()
+  increaseEnergy(game, pieceTile)
   {
-    if (this.energy < this.energyCapacity)
-    {
-      this.energy += 1
+    var oldEnergy = this.energy
+    super.increaseEnergy(game, pieceTile)
+    if (this.energy > oldEnergy)
       this.goldProduction += 1
-    }
+  }
+
+  reduceEnergy(game, pieceTile)
+  {
+    var oldEnergy = this.energy
+    super.reduceEnergy(game, pieceTile)
+    if (this.energy < oldEnergy)
+      this.goldProduction -= 1
   }
 }
 //name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movement, health, attackRange, isFlat, canAttack
@@ -544,17 +766,24 @@ class MediumGoldFarm extends Piece
 {
   constructor()
   {
-    super("Medium Gold Farm", "+1 energy = +2 gold production", "", "MGF", ["Building"], 5, 3, 0, 0, 3, 0, false, false)
+    super("Medium Gold Farm", "+1 energy = +2 gold production", "MGF", ["Building"], 5, 3, 0, 0, 3, 0, false, false)
     this.goldProduction = 0
   }
 
-  increaseEnergy()
+  increaseEnergy(game, pieceTile)
   {
-    if (this.energy < this.energyCapacity)
-    {
-      this.energy += 1
+    var oldEnergy = this.energy
+    super.increaseEnergy(game, pieceTile)
+    if (this.energy > oldEnergy)
       this.goldProduction += 2
-    }
+  }
+
+  reduceEnergy(game, pieceTile)
+  {
+    var oldEnergy = this.energy
+    super.reduceEnergy(game, pieceTile)
+    if (this.energy < oldEnergy)
+      this.goldProduction -= 2
   }
 }
 
@@ -565,17 +794,24 @@ class LargeGoldFarm extends Piece
 {
   constructor()
   {
-    super("Large Gold Farm", "+1 energy = +3 gold production", "", "LGF", ["Building"], 7, 1, 0, 0, 3, 0, false, false)
+    super("Large Gold Farm", "+1 energy = +3 gold production", "LGF", ["Building"], 7, 1, 0, 0, 3, 0, false, false)
     this.goldProduction = 0
   }
 
-  increaseEnergy()
+  increaseEnergy(game, pieceTile)
   {
-    if (this.energy < this.energyCapacity)
-    {
-      this.energy += 1
+    var oldEnergy = this.energy
+    super.increaseEnergy(game, pieceTile)
+    if (this.energy > oldEnergy)
       this.goldProduction += 3
-    }
+  }
+
+  reduceEnergy(game, pieceTile)
+  {
+    var oldEnergy = this.energy
+    super.reduceEnergy(game, pieceTile)
+    if (this.energy < oldEnergy)
+      this.goldProduction -= 3
   }
 }
 
@@ -588,26 +824,24 @@ class SmallPointsMiner extends Piece
 {
   constructor()
   {
-    super("Small Points Miner", "produces (energy*VP square value) vp tokens", "", "SPM", ["Building"], 2, 2, 0, 0, 3, 0, false, false)
+    super("Small Points Miner", "produces (energy*VP square value) vp tokens", "SPM", ["Building"], 2, 2, 0, 0, 3, 0, false, false)
     this.victoryPointTokenProduction = 0
   }
 
-  increaseEnergy()
+  increaseEnergy(game, pieceTile)
   {
-    if (this.energy < this.energyCapacity)
-    {
-      this.energy += 1
+    var oldEnergy = this.energy
+    super.increaseEnergy(game, pieceTile)
+    if (this.energy > oldEnergy)
       this.victoryPointTokenProduction += 1
-    }
   }
 
-  reduceEnergy()
+  reduceEnergy(game, pieceTile)
   {
-    if (this.energy != 0)
-    {
-      this.energy -= 1
+    var oldEnergy = this.energy
+    super.increaseEnergy(game, pieceTile)
+    if (this.energy < oldEnergy)
       this.victoryPointTokenProduction -= 1
-    }
   }
 }
 
@@ -618,26 +852,24 @@ class MediumPointsMiner extends Piece
 {
   constructor()
   {
-    super("Medium Points Miner", "produces (2*energy*VP square value) vp tokens", "", "MPF", ["Building"], 5, 2, 0, 0, 3, 0, false, false)
+    super("Medium Points Miner", "produces (2*energy*VP square value) vp tokens", "MPF", ["Building"], 5, 2, 0, 0, 3, 0, false, false)
     this.victoryPointTokenProduction = 0
   }
 
-  increaseEnergy()
+  increaseEnergy(game, pieceTile)
   {
-    if (this.energy < this.energyCapacity)
-    {
-      this.energy += 1
+    var oldEnergy = this.energy
+    super.increaseEnergy(game, pieceTile)
+    if (this.energy > oldEnergy)
       this.victoryPointTokenProduction += 2
-    }
   }
 
-  reduceEnergy()
+  reduceEnergy(game, pieceTile)
   {
-    if (this.energy != 0)
-    {
-      this.energy -= 1
+    var oldEnergy = this.energy
+    super.increaseEnergy(game, pieceTile)
+    if (this.energy < oldEnergy)
       this.victoryPointTokenProduction -= 2
-    }
   }
 }
 
@@ -648,26 +880,24 @@ class LargePointsMiner extends Piece
 {
   constructor()
   {
-    super("Large Points Miner", "produces (3*energy*VP square value) vp tokens", "", "LPF", ["Building"], 8, 2, 0, 0, 3, 0, false, false)
+    super("Large Points Miner", "produces (3*energy*VP square value) vp tokens", "LPF", ["Building"], 8, 2, 0, 0, 3, 0, false, false)
     this.victoryPointTokenProduction = 0
   }
 
-  increaseEnergy()
+  increaseEnergy(game, pieceTile)
   {
-    if (this.energy < this.energyCapacity)
-    {
-      this.energy += 1
+    var oldEnergy = this.energy
+    super.increaseEnergy(game, pieceTile)
+    if (this.energy > oldEnergy)
       this.victoryPointTokenProduction += 3
-    }
   }
 
-  reduceEnergy()
+  reduceEnergy(game, pieceTile)
   {
-    if (this.energy != 0)
-    {
-      this.energy -= 1
+    var oldEnergy = this.energy
+    super.increaseEnergy(game, pieceTile)
+    if (this.energy < oldEnergy)
       this.victoryPointTokenProduction -= 3
-    }
   }
 }
 
@@ -680,8 +910,9 @@ class SmallEnergyFarm extends Piece
 {
   constructor()
   {
-    super("Small Energy Farm", "+1 energy capacity", "", "SEF", ["Building"], 4, 0, 0, 0, 3, 0, false, false)
+    super("Small Energy Farm", "+1 energy capacity -- automatically active", "SEF", ["Building"], 4, 0, 0, 0, 3, 0, false, false)
     this.energyCapacityProduction = 1
+    this.isActive = true
   }
 }
 
@@ -692,8 +923,9 @@ class MediumEnergyFarm extends Piece
 {
   constructor()
   {
-    super("Medium Energy Farm", "+2 energy capacity", "", "MEF", ["Building"], 7, 0, 0, 0, 3, 0, false, false)
+    super("Medium Energy Farm", "+2 energy capacity -- automatically active", "MEF", ["Building"], 7, 0, 0, 0, 3, 0, false, false)
     this.energyCapacityProduction = 2
+    this.isActive = true
   }
 }
 
@@ -704,8 +936,9 @@ class LargeEnergyFarm extends Piece
 {
   constructor()
   {
-    super("Large Energy Farm", "+3 energy capacity", "", "LEF", ["Building"], 9, 0, 0, 0, 3, 0, false, false)
+    super("Large Energy Farm", "+3 energy capacity -- automatically active", "LEF", ["Building"], 9, 0, 0, 0, 3, 0, false, false)
     this.energyCapacityProduction = 3
+    this.isActive = true
   }
 }
 
@@ -717,7 +950,7 @@ class Blight extends Piece
 {
   constructor()
   {
-    super("Blight", "-1 victory point for territory owner", "", "BL", ["Building", "Blight"], 0, 0, 0, 0, 1, 0, true, false)
+    super("Blight", "-1 victory point for territory owner", "BL", ["Building", "Blight"], 0, 0, 0, 0, 1, 0, true, false)
   }
 }
 
@@ -730,18 +963,60 @@ module.exports.spells = spells
 
 /////////utilities//////////
 
+function updatePiecesWhichCanReceiveFreeEnergy(game)
+{
+  for (var tile of game.getAllTilesInListForm())
+  {
+    if(tile.piece != null)
+    {
+      tile.piece.canReceiveFreeEnergyAtThisLocation = tile.piece.canReceiveFreeEnergyAtTile(game, tile)          
+    }
+    if(tile.flatPiece != null)
+    {
+      tile.flatPiece.canReceiveFreeEnergyAtThisLocation = tile.flatPiece.canReceiveFreeEnergyAtTile(game, tile)                    
+    }
+  }    
+}
+
 function isInRangeOfFriendlyConduit(game, playerColor, pieceTile)
 {
   for (var tile of game.getAllTilesInListForm())
   {
     var piece = tile.piece
     var flatPiece = tile.flatPiece
-    if(piece != null && piece.types.includes("Conduit") && piece.owner == playerColor && getDistanceBetweenTwoTiles(tile, pieceTile) <= piece.distributionRange && piece.isActive)
+    if(piece != null && piece.types.includes("Conduit") && piece.owner == playerColor && getDistanceBetweenTwoTiles(tile, pieceTile) <= piece.energyDistributionRange && piece.isActive)
       return true
-    if(flatPiece != null && flatPiece.types.includes("Conduit") && flatPiece.owner == playerColor && getDistanceBetweenTwoTiles(flatPiece, pieceTile) <= flatPiece.distributionRange && flatPiece.isActive)
+    if(flatPiece != null && flatPiece.types.includes("Conduit") && flatPiece.owner == playerColor && getDistanceBetweenTwoTiles(flatPiece, pieceTile) <= flatPiece.energyDistributionRange && flatPiece.isActive)
       return true
   }
   return false
+}
+
+function getTilesInRangeOfAFriendlyCaster(game, playerColor)
+{
+  var newTiles = []
+  var casterTiles = getTilesWithFriendlyActiveCasters(game.getAllTilesInListForm(), playerColor)
+  for (var casterTile of casterTiles)
+  {
+    for (tile of getTilesWithinRangeOfTile(game.getAllTilesInListForm(), casterTile, casterTile.piece.castingRange))
+    {
+      newTiles.push(tile)
+    }
+  }
+  return newTiles
+}
+
+function getTilesWithFriendlyActiveCasters(tiles, playerColor)
+{
+  var newTiles = []
+  for (var tile of tiles)
+  {
+    if (tile.piece != null && tile.piece.types.includes("Caster") && tile.piece.owner == playerColor && tile.piece.isActive)
+    {
+      newTiles.push(tile)
+    }
+  }
+  return newTiles
 }
 
 function getTileBetweenTwoTilesTwoSpacesApartInLine(board, tile1, tile2)
@@ -778,7 +1053,16 @@ function getTilesInHopRangeAndThePathThere(board, fromTile)
 {
   var tilesThatCanBeHoppedToAndThePathThere = new Map()
   var currentPath = []
-  getTilesInHopRangeAndThePathThereHelper(board, fromTile, fromTile.piece.movement, tilesThatCanBeHoppedToAndThePathThere, currentPath)
+  if (fromTile.piece.movement % 2 != 0)
+  {
+    var adjustedMovement = fromTile.piece.movement - 1
+    if (adjustedMovement < 0)
+      adjustedMovement = 0
+  }
+  else
+    adjustedMovement = fromTile.piece.movement
+
+  getTilesInHopRangeAndThePathThereHelper(board, fromTile, adjustedMovement, tilesThatCanBeHoppedToAndThePathThere, currentPath)
   return tilesThatCanBeHoppedToAndThePathThere
 }
 
@@ -882,6 +1166,15 @@ function getTilesNextToFriendlyBuilders(game, isRedPlayer)
   {
     newTiles = newTiles.concat(getAdjacentTiles(game.board, tile))
   }
+  return newTiles
+}
+
+function getTilesWithPiecesWithMovementCapacityHigherThanZero(tiles)
+{
+  var newTiles = []
+  for (tile of tiles)
+    if(tile.piece.movementCapacity > 0)
+      newTiles.push(tile)
   return newTiles
 }
 
