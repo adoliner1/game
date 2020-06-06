@@ -5,11 +5,13 @@ const endOfRedTiles = 3
 const startOfBlueTiles = 12
 const endOfBlueTiles = 15
 
+var clickSound = new Audio('../sounds/click.wav');
+
 $(function () 
 {
 	//globals
 	var socket = io()
-	window.actionButtons = [($('#castUnitSpellOnFlatPieceButton')), ($('#castUnitSpellOnPieceButton')), ($('#castUnitSpellButton')), ($('#buyButton')),($('#buildButton')),($('#moveButton')),($('#energizeButton')),($('#activateButton')),($('#castButton')),($('#attackButton')),($('#attackPieceButton')),($('#attackFlatPieceButton')), ($('#castOnFlatPieceButton')), ($('#castOnPieceButton'))]
+	window.actionButtons = [($('#castUnitSpellOnFlatPieceButton')), ($('#energizeFlatPieceButton')), ($('#castUnitSpellOnPieceButton')), ($('#castUnitSpellButton')), ($('#buyButton')),($('#buildButton')),($('#moveButton')),($('#energizeButton')),($('#activateButton')),($('#castButton')),($('#attackButton')),($('#attackPieceButton')),($('#attackFlatPieceButton')), ($('#castOnFlatPieceButton')), ($('#castOnPieceButton'))]
 	window.allButtons = [($('#endTurnButton')), ($('#endActionPhaseButton'))].concat(actionButtons)
 
 	//tiles which can currently be acted on(moved to, attacked, casted on, built on)
@@ -30,7 +32,7 @@ $(function ()
 
 	disableAllButtons()
 
-	//server emit handlers
+	//server emit handlers 
 	socket.on('connect', function()
 	{
 		socket.emit('new socket connected to game', readCookie("nickName"))
@@ -46,7 +48,7 @@ $(function ()
 		window.game = newGameState
 
 		enableEndPhaseOrEndActionButton(game)
-		enableEnergizeButtonIfNecessary(game)
+		enableEnergizeButtonAndRehighlightEnergizedPieceIfNecessary(game)
 
 		updateInventoryDOM(true, game.redPlayer.inventory)
 		updateInventoryDOM(false, game.bluePlayer.inventory)
@@ -54,11 +56,12 @@ $(function ()
 		updatePlayerResourcesDOM(true, game.redPlayer)
 		updatePlayerResourcesDOM(false, game.bluePlayer)
 
+
 		if (currentlySelectedTile != null)
 			updateDisplayerFromTile(game.board[currentlySelectedTile.col][currentlySelectedTile.row])
 
 		outlineVPSquares(game.board)
-
+		updateVictoryPointTokenSupplyDOM(game.victoryPointTokenSupply, game.victoryPointTokenDrip)
 		updateDOMForBoard(game.board)
 	})
 
@@ -76,7 +79,7 @@ $(function ()
 		addStoreClickHandler()
 
 		enableEndPhaseOrEndActionButton(game)
-		enableEnergizeButtonIfNecessary(game)
+		enableEnergizeButtonAndRehighlightEnergizedPieceIfNecessary(game)
 
 		updateInventoryDOM(true, game.redPlayer.inventory)
 		updateInventoryDOM(false, game.bluePlayer.inventory)
@@ -85,7 +88,7 @@ $(function ()
 		updatePlayerResourcesDOM(false, game.bluePlayer)
 
 		outlineVPSquares(game.board)
-
+		updateVictoryPointTokenSupplyDOM(game.victoryPointTokenSupply, game.victoryPointTokenDrip)
 		updateDOMForBoard(game.board)
 
 	})
@@ -134,13 +137,22 @@ $(function ()
 		highlightTilesGreenAndAddHover(activeTiles)
 	})
 
+	$(document).click(function() 
+	{
+		unhighlightBordersOfAllCurrentlyHighlightedDOMObjects()
+		disableAllActionButtons()
+		updateDisplayerFromTile(null)
+		updateDisplayerFromPiece(null)
+	});
+
 	//store click handler
 	function addStoreClickHandler()
 	{
-		$('#stores td').click(function storeTileClicked()
+		$('#stores td').click(function storeTileClicked(e)
 		{
-			disableAllActionButtons()
 			unhighlightBordersOfAllCurrentlyHighlightedDOMObjects()
+			disableAllActionButtons()
+			e.stopPropagation();
 			var parentShop = this.closest('table')
 			var index = this.cellIndex
 			window.currentlyClickedStoreTileDOM = $(this)
@@ -161,10 +173,11 @@ $(function ()
 	}
 
 	//inventory click handler
-	$('.inventory td').click(function tileClicked()
+	$('.inventory td').click(function tileClicked(e)
 	{
-		disableAllActionButtons()
 		unhighlightBordersOfAllCurrentlyHighlightedDOMObjects()
+		disableAllActionButtons()
+		e.stopPropagation();
 		window.currentlySelectedInventoryDOM = $(this)
 		highlightBordersOfDOMObject(currentlySelectedInventoryDOM)
 		console.log(currentlySelectedInventoryDOM)
@@ -191,11 +204,14 @@ $(function ()
 		}
 	})
 
+
+
 	//board click handler
-	$('#board td').click(function tileClicked()
+	$('#board td').click(function tileClicked(e)
 	{
-		disableAllActionButtons()
 		unhighlightBordersOfAllCurrentlyHighlightedDOMObjects()
+		disableAllActionButtons()
+		e.stopPropagation();
 		var clickedDOMTableElement = this
 		var xpos = clickedDOMTableElement.cellIndex
 		var ypos = clickedDOMTableElement.parentNode.rowIndex
@@ -291,6 +307,13 @@ $(function ()
 			}
 		}
 
+		var playerFreeEnergy = (window.isRedPlayer) ? (game.redPlayer.energyCapacity - game.redPlayer.activeEnergy) : (game.bluePlayer.energyCapacity - game.bluePlayer.activeEnergy)
+		if (currentlySelectedTile.flatPiece != null && isThisPlayersTurn() && playerOwnsPiece(isRedPlayer, currentlySelectedTile.flatPiece) && currentlySelectedTile.flatPiece.energy < currentlySelectedTile.flatPiece.energyCapacity && playerFreeEnergy > 0 && game.phase == "Energize" && currentlySelectedTile.flatPiece.canReceiveFreeEnergyAtThisLocation)
+		{
+			window.flatPiecePotentiallyBeingEnergized = currentlySelectedTile.flatPiece
+			enableAndShowButton($('#energizeFlatPieceButton'))
+		}
+
 		setAllModesToFalse()
 		resetTilesColorsAndAddHover(activeTiles)
 		activeTiles = []
@@ -300,13 +323,23 @@ $(function ()
 	//button handlers
 	$('#energizeButton').submit(function(e)
 	{
+		clickSound.play()
 		disableAllActionButtons()
 		e.preventDefault()
-		socket.emit('request to energize', currentlySelectedTile)
+		socket.emit('request to energize', currentlySelectedTile, false)
+	})
+
+	$('#energizeFlatPieceButton').submit(function(e)
+	{
+		clickSound.play()
+		disableAllActionButtons()
+		e.preventDefault()
+		socket.emit('request to energize', currentlySelectedTile, true)		
 	})
 
 	$('#endActionPhaseButton').submit(function(e)
 	{
+		clickSound.play()
 		disableAllButtons()
 		e.preventDefault()
 		socket.emit('request to end action phase')
@@ -314,6 +347,7 @@ $(function ()
 
 	$('#endTurnButton').submit(function(e)
 	{
+		clickSound.play()
 		disableAllButtons()
 		e.preventDefault()
 		socket.emit('request to end turn')
@@ -321,6 +355,7 @@ $(function ()
 	
 	$('#buildButton').submit(function(e)
 	{
+		clickSound.play()
 		disableAllActionButtons()
 		e.preventDefault()
 		buildMode = true
@@ -329,6 +364,7 @@ $(function ()
 
 	$('#moveButton').submit(function(e)
 	{
+		clickSound.play()
 		disableAllActionButtons()
 		e.preventDefault()
 		moveMode = true
@@ -337,6 +373,7 @@ $(function ()
 	
 	$('#buyButton').submit(function(e)
 	{
+		clickSound.play()
 		e.preventDefault()
 		disableAllActionButtons()
 		socket.emit('request piece purchase', currentlySelectedStorePiece)
@@ -344,6 +381,7 @@ $(function ()
 
 	$('#activateButton').submit(function(e)
 	{
+		clickSound.play()
 		e.preventDefault()
 		disableAllActionButtons()
 
@@ -351,6 +389,7 @@ $(function ()
 
 	$('#attackButton').submit(function(e)
 	{
+		clickSound.play()
 		disableAllActionButtons()
 		e.preventDefault()
 		attackMode = true
@@ -359,6 +398,7 @@ $(function ()
 
 	$('#attackPieceButton').submit(function(e)
 	{
+		clickSound.play()
 		disableAllActionButtons()
 		e.preventDefault()
 		socket.emit('request to attack a piece', tilePieceIsPotentiallyAttackingFrom,  currentlySelectedTile, false)
@@ -366,6 +406,7 @@ $(function ()
 
 	$('#attackFlatPieceButton').submit(function(e)
 	{
+		clickSound.play()
 		disableAllActionButtons()
 		e.preventDefault()
 		socket.emit('request to attack a piece', tilePieceIsPotentiallyAttackingFrom,  currentlySelectedTile, true)
@@ -373,6 +414,7 @@ $(function ()
 
 	$('#castUnitSpellButton').submit(function(e)
 	{
+		clickSound.play()
 		disableAllActionButtons()
 		e.preventDefault()
 		unitCastMode = true
@@ -381,6 +423,7 @@ $(function ()
 
 	$('#castUnitSpellOnPieceButton').submit(function(e)
 	{
+		clickSound.play()
 		disableAllActionButtons()
 		e.preventDefault()
 		socket.emit('request to cast a unit spell', tilePieceIsPotentiallyCastingSpellFrom, currentlySelectedTile, "Piece")
@@ -389,6 +432,7 @@ $(function ()
 
 	$('#castUnitSpellOnFlatPieceButton').submit(function(e)
 	{
+		clickSound.play()
 		disableAllActionButtons()
 		e.preventDefault()
 		socket.emit('request to cast a unit spell', tilePieceIsPotentiallyCastingSpellFrom, currentlySelectedTile, "Flat Piece")
@@ -397,6 +441,7 @@ $(function ()
 
 	$('#castOnFlatPieceButton').submit(function(e)
 	{
+		clickSound.play()
 		disableAllActionButtons()
 		e.preventDefault()
 		socket.emit('request to cast a spell', currentInventoryPosition, currentlySelectedTile, "Flat Piece")
@@ -405,6 +450,7 @@ $(function ()
 
 	$('#castOnPieceButton').submit(function(e)
 	{
+		clickSound.play()
 		disableAllActionButtons()
 		e.preventDefault()
 		socket.emit('request to cast a spell', currentInventoryPosition, currentlySelectedTile, "Piece")
@@ -413,6 +459,7 @@ $(function ()
 
 	$('#castButton').submit(function(e)
 	{
+		clickSound.play()
 		e.preventDefault()
 		disableAllActionButtons()
 		castMode = true
@@ -434,14 +481,19 @@ function getDOMForTile(tile)
 	return $($("#board tbody")[0].rows[tile.row].cells[tile.col])
 }
 
-function enableEnergizeButtonIfNecessary(game)
+function enableEnergizeButtonAndRehighlightEnergizedPieceIfNecessary(game)
 {
+	if (currentlySelectedTile != null)
+		currentlySelectedTile = game.board[currentlySelectedTile.col][currentlySelectedTile.row]
+	else
+		return
 	var playerFreeEnergy = (window.isRedPlayer) ? (game.redPlayer.energyCapacity - game.redPlayer.activeEnergy) : (game.bluePlayer.energyCapacity - game.bluePlayer.activeEnergy)
-	if ((currentlySelectedTile != null && currentlySelectedTile.piece != null && currentlySelectedTile.piece.energy < currentlySelectedTile.piece.energyCapacity) && playerFreeEnergy > 0 && game.phase == "Energize")
+	if (currentlySelectedTile.piece != null && playerOwnsPiece(isRedPlayer, currentlySelectedTile.piece) && currentlySelectedTile.piece.energy < currentlySelectedTile.piece.energyCapacity && playerFreeEnergy > 0 && game.phase == "Energize" && isThisPlayersTurn())
 	{
 		window.piecePotentiallyBeingEnergized = currentlySelectedTile.piece
+		highlightBordersOfDOMObject(getDOMForTile(currentlySelectedTile))
 		enableAndShowButton($('#energizeButton'))
-	}	
+	}
 }
 
 function updateInventoryDOM(isRedPlayer, newInventory)
@@ -458,9 +510,9 @@ function updateInventoryDOM(isRedPlayer, newInventory)
 
 function updatePlayerResourcesDOM(isRedPlayer, player)
 {
-	var goldDisplay = "Gold: " + player.gold
-	var energyDisplay = "Energy: " + player.activeEnergy + "/" + player.energyCapacity
-	var victoryPointDisplay = "Victory Points: " + player.victoryPoints
+	var goldDisplay = "<b> Gold: </b>"  + player.gold + "(+" + player.goldProduction + ")"
+	var energyDisplay = "<b> Energy: </b>" + player.activeEnergy + "/" + player.energyCapacity
+	var victoryPointDisplay = "<b> Victory Points: </b>" + player.victoryPoints + "(+" + player.victoryPointTokenProduction + ")"
 	if (isRedPlayer)
 	{
 		$('#redPlayerResources p.gold').html(goldDisplay)
@@ -511,7 +563,7 @@ function unhighlightBordersOfPlayerInventoryDOMObject(inventoryDOMObject)
 	if (inventoryDOMObject != null)
 	{
 		var inventory = inventoryDOMObject.closest('table')
-		if (inventory.id == 'redInventory')
+		if (inventory[0].id == 'redInventory')
 			inventoryDOMObject.css("border", "1px solid #cc0000")
 		else
 			inventoryDOMObject.css("border", "1px solid #0000b3")
@@ -547,6 +599,10 @@ function updateDOMForTile(tile)
 	if (tile.flatPiece != null)
 	{
 		DOMObject.children(".flatPiece").html(tile.flatPiece.boardAvatar)
+		if(tile.flatPiece.isActive)
+			DOMObject.children(".flatPiece").css("opacity", "1")
+		else
+			DOMObject.children(".flatPiece").css("opacity", ".5")
 		assignPieceColor(tile.flatPiece.owner, DOMObject.children(".flatPiece"))
 	}
 	else
@@ -554,6 +610,10 @@ function updateDOMForTile(tile)
 	if (tile.piece != null)
 	{
 		DOMObject.children(".piece").html(tile.piece.boardAvatar)
+		if(tile.piece.isActive)
+			DOMObject.children(".piece").css("opacity", "1")
+		else
+			DOMObject.children(".piece").css("opacity", ".5")
 		assignPieceColor(tile.piece.owner, DOMObject.children(".piece"))		
 	}
 	else
@@ -648,7 +708,7 @@ function outlineVPSquares(board)
 		{
 			var DOMObject = getDOMForTile(tile)
 			if (tile.statuses.includes("VP1") || tile.statuses.includes("VP2") || tile.statuses.includes("VP3"))
-				DOMObject.css('border', '2px solid #75f542')				
+				DOMObject.css('border', '2px solid #33cc33')				
 		}
 	}
 }
@@ -751,14 +811,14 @@ function enableEndPhaseOrEndActionButton(game)
 function updateDisplayerFromTile(tile)
 {
 	clearDisplayerLists()
-	if (tile != null)
+	if (tile == null)
+		return
+
+	for (key of Object.keys(tile))
 	{
-		for (key of Object.keys(tile))
-		{
-			var propertyStringDisplay = ("" + key + ": " + tile[key]) 
-			$('#tileProperties').append($('<li>').text(propertyStringDisplay))
-		}		
-	}
+		var propertyStringDisplay = ("" + key + ": " + tile[key]) 
+		$('#tileProperties').append($('<li>').text(propertyStringDisplay))
+	}		
 
 	if(tile.piece != null)
 	{
@@ -778,6 +838,12 @@ function updateDisplayerFromTile(tile)
 		}
 	}
 }
+
+function updateVictoryPointTokenSupplyDOM(victoryPointTokenSupply, victoryPointTokenDrip)
+{
+	$('#victoryPointTokenSupply').html("VP Token Supply: " + victoryPointTokenSupply + "(-" + victoryPointTokenDrip + ")")
+}
+
 
 function disableAllButtons()
 {
@@ -807,4 +873,4 @@ function readCookie(name) {
             return decodeURIComponent(c.substring(nameEQ.length, c.length));
     }
     return null;
-} 
+}

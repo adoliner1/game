@@ -73,7 +73,7 @@ $(function () {
   });
 
   socket.on('trigger redirect for new game', function(host){
-    window.location.href = "http://localhost:3000/game/" + host;
+    window.location.href = "http://localhost:8080/game/" + host;
   });
 
   socket.on('user is typing', function(typingUsers)
