@@ -645,6 +645,12 @@ io.on('connection', function(socket)
 
     var game = findGameFromSocketID(socket.id)
 
+    if (clientPiece == null)
+    {
+      io.to(socket.id).emit("new log message", "No piece requested")
+      return
+    }
+
     if (game == null)
     {
       io.to(socket.id).emit("new log message", "No such game")
@@ -972,14 +978,13 @@ io.on('connection', function(socket)
       board[4][1].piece.isActive = true
       board[4][1].piece.canReceiveFreeEnergyAtThisLocation = true
       board[4][1].piece.currentCol = 4
-      board[4][1].piece.currentRow = 1
-
+      board[4][1].piece.currentRow = 1 
 
       var newGame =   
       {
         host: host,
-        redPlayer: {socketID: null, turnsTaken: 0, Name: name, goldProduction: 5, gold: 99, victoryPointTokenProduction: 0, victoryPoints: 0, activeEnergy: 0, energyCapacity: 6, inventory: Array(5)},
-        bluePlayer: {socketID: null, turnsTaken: 0, Name: host, goldProduction: 5, gold: 99, victoryPointTokenProduction: 0, victoryPoints: 0, activeEnergy: 0, energyCapacity: 6, inventory: Array(5)},
+        redPlayer: {socketID: null, turnsTaken: 0, Name: name, goldProduction: 5, gold: 10, victoryPointTokenProduction: 0, victoryPoints: 0, activeEnergy: 0, energyCapacity: 6, inventory: Array(5)},
+        bluePlayer: {socketID: null, turnsTaken: 0, Name: host, goldProduction: 5, gold: 10, victoryPointTokenProduction: 0, victoryPoints: 0, activeEnergy: 0, energyCapacity: 6, inventory: Array(5)},
         board: board,
         reactions: new Map,
         buildings: pieces.buildings,

@@ -92,7 +92,7 @@ class Empower extends Spell
 
   cast(game, targetPiece)
   {
-    targetPiece.strength = target.strength + 1
+    targetPiece.strength = targetPiece.strength + 1
   }
 }
 
@@ -201,7 +201,6 @@ class Detonate extends Spell
 var detonate = new Detonate
 spells[detonate.name] = detonate
 
-
 ////////////////////////////
 //pieces
 ////////////////////////////
@@ -217,7 +216,7 @@ class Piece
     this.energy = 0
     this.energyCapacity = energyCapacity
     this.strength = strength
-    this.movement = movementCapacity
+    this.movement = 0
     this.movementCapacity = movementCapacity
     this.healthCapacity = healthCapacity
     this.health = healthCapacity
@@ -435,6 +434,11 @@ class Piece
   die(game, killer)
   {
     var victimTile = this.getCurrentTile(game)
+
+    if ("addReactionsWhenBuilt" in this)
+      for (var [reactionTile, reactionsList] of game.reactions) 
+        removeValueFromArray(reactionsList, this)
+
     if(this.owner == "Red")
       game.redPlayer.activeEnergy -= this.energy
     else
@@ -1149,6 +1153,7 @@ class Techies extends Piece
       game.redPlayer.activeEnergy -= this.energy
     else
       game.bluePlayer.activeEnergy -= this.energy
+
     if (this.isFlat)
       victimTile.flatPiece = null
     else
@@ -1433,7 +1438,6 @@ class SmallGenerator extends Piece
   {
     super("Small Generator", "+1 energy capacity -- requires no energy to activate", "SG", ["Building"], 4, 0, 0, 0, 3, 0, false, false)
     this.energyCapacityProduction = 1
-    this.isActive = true
     this.minimumEnergyNeededForActivation = 0
   }
 }
@@ -1447,7 +1451,6 @@ class MediumGenerator extends Piece
   {
     super("Medium Generator", "+2 energy capacity -- requires no energy to activate", "MG", ["Building"], 7, 0, 0, 0, 3, 0, false, false)
     this.energyCapacityProduction = 2
-    this.isActive = true
     this.minimumEnergyNeededForActivation = 0
   }
 }
@@ -1461,7 +1464,6 @@ class LargeGenerator extends Piece
   {
     super("Large Generator", "+3 energy capacity -- requires no energy to activate", "LG", ["Building"], 9, 0, 0, 0, 3, 0, false, false)
     this.energyCapacityProduction = 3
-    this.isActive = true
     this.minimumEnergyNeededForActivation = 0
   }
 }
@@ -1749,7 +1751,7 @@ function playerOwnsPiece(isRedPlayer, piece)
 
 function getTilesNextToFriendlyBuilders(game, isRedPlayer)
 {
-  var friendlyBuilderLocations = getTilesWithFriendlyBuilders(game.getAllTilesInListForm(), isRedPlayer)
+  var friendlyBuilderLocations = getTilesWithActiveFriendlyBuilders(game.getAllTilesInListForm(), isRedPlayer)
   var newTiles = []
   for (tile of friendlyBuilderLocations)
   {
@@ -1781,11 +1783,11 @@ function isAttackableTile(tile)
   return (tile.piece != null || (tile.flatPiece != null && !tile.flatPiece.types.includes("Platform")))
 }
 
-function getTilesWithFriendlyBuilders(tiles, isRedPlayer)
+function getTilesWithActiveFriendlyBuilders(tiles, isRedPlayer)
 {
   var newTiles = []
   for (tile of tiles)
-    if (tile.piece != null && tile.piece.types.includes("Builder") && playerOwnsPiece(isRedPlayer, tile.piece))
+    if (tile.piece != null && tile.piece.types.includes("Builder") && playerOwnsPiece(isRedPlayer, tile.piece) && tile.piece.isActive)
       newTiles.push(tile)
   return newTiles
 }
@@ -1904,7 +1906,7 @@ function removeValueFromArray(arr)
   while (L > 1 && arr.length) 
   {
     what = a[--L];
-    while ((ax= arr.indexOf(what)) !== -1)
+    while ((ax = arr.indexOf(what)) !== -1)
         arr.splice(ax, 1);
   }
   return arr;

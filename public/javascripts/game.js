@@ -4,8 +4,7 @@ const startOfRedTiles = 0
 const endOfRedTiles = 3
 const startOfBlueTiles = 12
 const endOfBlueTiles = 15
-
-var clickSound = new Audio('../sounds/click.wav');
+const clickSound = new Audio('../sounds/click.wav');
 
 $(function () 
 {
@@ -21,7 +20,7 @@ $(function ()
 	//storage variables to pass data between click handlers
 	window.currentlySelectedTile = null
 	window.currentInventoryPosition = null
-	window.currentlySelectedStorePiece = {}
+	window.currentlySelectedStorePiece = null
 
 	//modes are control flow variables
 	window.buildMode = false
@@ -73,6 +72,8 @@ $(function ()
 		game.units = convertDictionaryToList(game.units)
 		game.spells = convertDictionaryToList(game.spells)
 		game.redPlayer.Name == readCookie("nickName") ? window.isRedPlayer = true : window.isRedPlayer = false
+
+		clearShops()
 		addPiecesToShop(game.buildings)
 		addPiecesToShop(game.units)
 		addPiecesToShop(game.spells)
@@ -510,9 +511,9 @@ function updateInventoryDOM(isRedPlayer, newInventory)
 
 function updatePlayerResourcesDOM(isRedPlayer, player)
 {
-	var goldDisplay = "<b> Gold: </b>"  + player.gold + "(+" + player.goldProduction + ")"
+	var goldDisplay = "<b> Gold: </b>"  + player.gold + " (+" + player.goldProduction + ")"
 	var energyDisplay = "<b> Energy: </b>" + player.activeEnergy + "/" + player.energyCapacity
-	var victoryPointDisplay = "<b> Victory Points: </b>" + player.victoryPoints + "(+" + player.victoryPointTokenProduction + ")"
+	var victoryPointDisplay = "<b> Victory Points: </b>" + player.victoryPoints + " (+" + player.victoryPointTokenProduction + ")"
 	if (isRedPlayer)
 	{
 		$('#redPlayerResources p.gold').html(goldDisplay)
@@ -779,14 +780,26 @@ function enableAndShowButton(button)
 function updateDisplayerFromPiece(piece)
 {
 	clearDisplayerLists()
-	if(piece != null)
+	if (piece == null)
+		return
+	$('#pieceProperties').append($('<li>').text("Piece"))
+	$("#pieceProperties li:first" ).first().css("font-weight", "bold")
+	$("#pieceProperties li:first").css("text-decoration", "underline")
+	for (key of Object.keys(piece))
 	{
-		for (key of Object.keys(piece))
+		if (key != "boardAvatar" && key != "owner" && key != "canAttack" && key != "canReceiveFreeEnergyAtThisLocation" && key != "currentCol" && key != "currentRow" && key != "isActive" && piece[key] != 0)
 		{
 			var propertyStringDisplay = ("" + key + ": " + piece[key])
 			$('#pieceProperties').append($('<li>').text(propertyStringDisplay))
 		}
 	}
+}
+
+function clearShops()
+{
+	$('#buildings tr').empty()
+	$('#units tr').empty()
+	$('#spells tr').empty()	
 }
 
 function clearDisplayerLists()
@@ -814,18 +827,33 @@ function updateDisplayerFromTile(tile)
 	if (tile == null)
 		return
 
+	$('#tileProperties').append($('<li>').text("Tile"))	
+	$("#tileProperties li:first").css("font-weight", "bold")
+	$("#tileProperties li:first").css("text-decoration", "underline")
+	$('#pieceProperties').append($('<li>').text("Piece"))
+	$("#pieceProperties li:first" ).first().css("font-weight", "bold")
+	$("#pieceProperties li:first").css("text-decoration", "underline")
+	$('#flatPieceProperties').append($('<li>').text("Flat Piece"))
+	$("#flatPieceProperties li:first" ).first().css("font-weight", "bold")
+	$("#flatPieceProperties li:first").css("text-decoration", "underline")
 	for (key of Object.keys(tile))
 	{
-		var propertyStringDisplay = ("" + key + ": " + tile[key]) 
-		$('#tileProperties').append($('<li>').text(propertyStringDisplay))
+		if (key != "piece")
+		{
+			var propertyStringDisplay = ("" + key + ": " + tile[key]) 
+			$('#tileProperties').append($('<li>').text(propertyStringDisplay))			
+		}
 	}		
 
 	if(tile.piece != null)
 	{
 		for (key of Object.keys(tile.piece))
 		{
-			var propertyStringDisplay = ("" + key + ": " + tile.piece[key]) 
-			$('#pieceProperties').append($('<li>').text(propertyStringDisplay))
+			if (key != "boardAvatar" && key != "owner" && key != "canAttack" && key != "canReceiveFreeEnergyAtThisLocation" && key != "currentCol" && key != "currentRow" && key != "isActive" && tile.piece[key] != 0)
+			{
+				var propertyStringDisplay = ("" + key + ": " + tile.piece[key]) 
+				$('#pieceProperties').append($('<li>').text(propertyStringDisplay))
+			}
 		}
 	}
 
@@ -833,15 +861,18 @@ function updateDisplayerFromTile(tile)
 	{
 		for (key of Object.keys(tile.flatPiece))
 		{
-			var propertyStringDisplay = ("" + key + ": " + tile.flatPiece[key]) 
-			$('#flatPieceProperties').append($('<li>').text(propertyStringDisplay))
+			if (key != "boardAvatar" && key != "owner" && key != "canAttack" && key != "canReceiveFreeEnergyAtThisLocation" && key != "currentCol" && key != "currentRow" && key != "isActive" && tile.piece[key] != 0)
+			{
+				var propertyStringDisplay = ("" + key + ": " + tile.flatPiece[key]) 
+				$('#flatPieceProperties').append($('<li>').text(propertyStringDisplay))
+			}
 		}
 	}
 }
 
 function updateVictoryPointTokenSupplyDOM(victoryPointTokenSupply, victoryPointTokenDrip)
 {
-	$('#victoryPointTokenSupply').html("VP Token Supply: " + victoryPointTokenSupply + "(-" + victoryPointTokenDrip + ")")
+	$('#victoryPointTokenSupply').html("VP Token Supply: " + victoryPointTokenSupply + " (-" + victoryPointTokenDrip + ")")
 }
 
 

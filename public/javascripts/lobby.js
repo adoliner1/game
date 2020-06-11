@@ -72,8 +72,10 @@ $(function () {
     redPlayerCell.innerHTML = game.redPlayer
   });
 
-  socket.on('trigger redirect for new game', function(host){
-    window.location.href = "http://localhost:8080/game/" + host;
+  socket.on('trigger redirect for new game', function(host)
+  {
+    var gameHostString = "game/" + host
+    window.location.href = window.location.href.replace("lobby", gameHostString)
   });
 
   socket.on('user is typing', function(typingUsers)

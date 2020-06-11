@@ -3,26 +3,26 @@ body {font: 13px Helvetica, Arial; height: 100%;}
 html {height: 100%;}
 td:hover {background-color: #FFFFE0;}
 
-#boardAndInventoriesAndNavBar {position: absolute;; right: 40%; height: 100%; width: 60%; padding: 5px}
-#board {position: absolute; top: 3%; left: 10%;}
-#board td {position: relative; border: 2px solid #606060; width: 55px; height: 55px}
+#boardAndInventoriesAndNavBar {position: absolute; right: 40%; height: 100%; width: 60%;}
+#board {position: absolute; top: 3%; left: 5%; height: 90%; width: 50%;}
+#board td {position: relative; border: 2px solid #606060;}
 
-#victoryPointTokenSupply {position: absolute; top: 47%; left: 60%; color:#33cc33; font-weight: bold;}
+#victoryPointTokenSupply {position: absolute; top: 47%; left: 60%; color: #33cc33; font-weight: bold;}
 
 .flatPiece {position: absolute; left: 27%; bottom: 5%; font-weight: bold;} 
 .piece {position: absolute; left: 27%; top: 5%; font-weight: bold;}
 
-#blueInventory {position: absolute; left: 70%; top: 84%;}
-#blueInventory td {position: relative; border: 1px solid #0000b3; width: 40px; height: 40px; text-align: center; vertical-align: center}
+#blueInventory {position: absolute; left: 70%; top: 84%; height: 5%; width: 20%;}
+#blueInventory td {position: relative; border: 1px solid #0000b3; width: 20%; text-align: center; vertical-align: center}
 
-#redInventory {position: absolute; left: 70%; top: 8%;}
-#redInventory td {position: relative; border: 1px solid #cc0000; width: 40px; height: 40px; text-align: center; vertical-align: center}
+#redInventory {position: absolute; left: 70%; top: 7%; height: 5%; width: 20%;}
+#redInventory td {position: relative; border: 1px solid #cc0000; width: 20%; text-align: center; vertical-align: center}
 
-#bluePlayerResources {position: absolute; top: 91%; left: 65%; width: 30%; height: 3%; color: blue;}
-#redPlayerResources {position: absolute; top: 3%; left: 65%; width: 30%; height: 3%; color: red;}
+#bluePlayerResources {position: absolute; top: 91%; left: 60%; width: 40%; height: 3%; color: blue;}
+#redPlayerResources {position: absolute; top: 3%; left: 60%; width: 40%; height: 3%; color: red;}
 
 .gold {position: absolute; top: 0%;}
-.energy {position: absolute; left: 30%; top: 0%;}
+.energy {position: absolute; left: 32%; top: 0%;}
 .vp {position: absolute; left: 60%; top: 0%;}
 
 #buttons {position: absolute; left: 80%; top: 45%;}
@@ -31,23 +31,21 @@ button:hover {background-color: #ffd9b3;}
 button:active {background-color: #ff9933;}
 
 #displayerAndShopAndButtonsAndLogSection {position: absolute; border: 1px solid #000000; height: 100%; width: 40%; left: 60%;}
-#displayer {position: absolute; height: 50%; width: 100%;}
 
+#displayer {position: absolute; height: 50%; width: 100%;}
 #pieceProperties {list-style-type: none; height: 50%; width: 100%; top: 0%; position: absolute; overflow: scroll;}
 #pieceProperties li { padding: 5px 10px; width: 100%;}
 #flatPieceProperties {list-style-type: none; height: 30%; width: 100%; top: 50%; position: absolute; overflow: scroll; border-top: 1px solid #000000;}
 #flatPieceProperties li { padding: 5px 10px; width: 100%;}
-#tileProperties {list-style-type: none; height: 31%; width: 100%; top: 80%; position: absolute; overflow: scroll; border-top: 1px solid #000000;}
+#tileProperties {list-style-type: none; height: 20%; width: 100%; top: 80%; position: absolute; overflow: scroll; border-top: 1px solid #000000;}
 #tileProperties li { padding: 5px 10px; width: 100%;}
 
-#piecePropertiesHeader {position: absolute; top: 0%; right: 50%; font-weight: bold; z-index: 1}
-#flatPiecePropertiesHeader {position: absolute; top: 50%; right: 50%; font-weight: bold; z-index: 1}
-#tilePropertiesHeader {position: absolute; top: 80%; right: 50%; font-weight: bold; z-index: 1}
+#stores {position: absolute; top: 50%; height: 15%; width: 100%; border-top: 1px solid #000000;}
+#stores table {height: 33%;}
+#stores td {width: 45px; height: 45px;}
+#buildings td {border: 1px solid #6b6b47; text-align: center; vertical-align: center}
+#units td {border: 1px solid #000080; text-align: center; vertical-align: center}
+#spells td {border: 1px solid #8f246b; text-align: center; vertical-align: center}
 
-#stores {position: absolute; padding: 5px; top: 55%; width: 100%; border-top: 1px solid #000000;}
-#buildings td {border: 1px solid #6b6b47; width: 40px; height: 40px; text-align: center; vertical-align: center}
-#units td {border: 1px solid #000080; width: 40px; height: 40px; text-align: center; vertical-align: center}
-#spells td {border: 1px solid #8f246b; width: 40px; height: 40px; text-align: center; vertical-align: center}
-
-#log {list-style-type: none; height: 25%; border-top: 1px solid #000000; width: 100%; position: absolute; top: 75%; overflow: scroll;}
+#log {list-style-type: none; height: 30%; border-top: 1px solid #000000; width: 100%; position: absolute; top: 70%; overflow: scroll;}
 #log li { padding: 5px 10px; width: 100%;}
