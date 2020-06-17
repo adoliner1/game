@@ -1,6 +1,5 @@
-var units = {}
-var buildings = []
-var spells = {}
+var baseSet = {}
+var nonBaseSet = {}
 var _ = require('lodash');
 
 const boardLength = 15;
@@ -46,7 +45,7 @@ class Surge extends Spell
 }
 
 var surge = new Surge
-spells[surge.name] = surge
+nonBaseSet[surge.name] = surge
 
 class GlobalSurge extends Spell
 {
@@ -71,7 +70,7 @@ class GlobalSurge extends Spell
 }
 
 var globalSurge = new GlobalSurge
-spells[globalSurge.name] = globalSurge
+nonBaseSet[globalSurge.name] = globalSurge
 
 
 class Empower extends Spell
@@ -97,7 +96,7 @@ class Empower extends Spell
 }
 
 var empower = new Empower
-spells[empower.name] = empower
+nonBaseSet[empower.name] = empower
 
 class Accelerate extends Spell
 {
@@ -122,7 +121,7 @@ class Accelerate extends Spell
 }
 
 var accelerate = new Accelerate
-spells[accelerate.name] = accelerate
+nonBaseSet[accelerate.name] = accelerate
 
 class QuickFoot extends Spell
 {
@@ -147,7 +146,7 @@ class QuickFoot extends Spell
 }
 
 var quickFoot = new QuickFoot
-spells[quickFoot.name] = quickFoot
+nonBaseSet[quickFoot.name] = quickFoot
 
 class LittleMissle extends Spell
 {
@@ -168,7 +167,7 @@ class LittleMissle extends Spell
 }
 
 var littleMissle = new LittleMissle
-spells[littleMissle.name] = littleMissle
+nonBaseSet[littleMissle.name] = littleMissle
 
 class Detonate extends Spell
 {
@@ -199,7 +198,7 @@ class Detonate extends Spell
 }
 
 var detonate = new Detonate
-spells[detonate.name] = detonate
+nonBaseSet[detonate.name] = detonate
 
 ////////////////////////////
 //pieces
@@ -475,7 +474,7 @@ class MovementPad extends Piece
 }
 
 var movementPad = new MovementPad
-buildings[movementPad.name] = movementPad
+nonBaseSet[movementPad.name] = movementPad
 
 class BoostPad extends Piece
 {
@@ -538,7 +537,7 @@ class BoostPad extends Piece
 }
 
 var boostPad = new BoostPad
-buildings[boostPad.name] = boostPad
+nonBaseSet[boostPad.name] = boostPad
 
 class EnergyPad extends Piece
 {
@@ -559,7 +558,7 @@ class EnergyPad extends Piece
 }
 
 var energyPad = new EnergyPad
-buildings[energyPad.name] = energyPad
+nonBaseSet[energyPad.name] = energyPad
 
 //name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, health, attackRange, isFlat, canAttack)
 class Wall extends Piece
@@ -571,7 +570,7 @@ class Wall extends Piece
 }
 
 var wall = new Wall
-buildings[wall.name] = wall
+nonBaseSet[wall.name] = wall
 
 class GreaterWall extends Piece
 {
@@ -582,7 +581,7 @@ class GreaterWall extends Piece
 }
 
 var greaterWall = new GreaterWall
-buildings[greaterWall.name] = greaterWall
+nonBaseSet[greaterWall.name] = greaterWall
 
 class SpikeTrap extends Piece
 {
@@ -608,7 +607,7 @@ class SpikeTrap extends Piece
 }
 
 var spikeTrap = new SpikeTrap
-buildings[spikeTrap.name] = spikeTrap
+nonBaseSet[spikeTrap.name] = spikeTrap
 
 class Archer extends Piece
 {
@@ -643,7 +642,7 @@ class Archer extends Piece
 }
 
 var archer = new Archer
-units[archer.name] = archer
+nonBaseSet[archer.name] = archer
 //name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, health, attackRange, isFlat, canAttack)
 
 class PhaserBoy extends Piece
@@ -671,7 +670,7 @@ class PhaserBoy extends Piece
 }
 
 var phaserBoy = new PhaserBoy
-units[phaserBoy.name] = phaserBoy
+nonBaseSet[phaserBoy.name] = phaserBoy
 
 class Scrapper extends Piece
 {
@@ -697,7 +696,7 @@ class Scrapper extends Piece
 }
 
 var scrapper = new Scrapper
-units[scrapper.name] = scrapper
+nonBaseSet[scrapper.name] = scrapper
 
 
 //name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, health, attackRange, isFlat, canAttack)
@@ -718,7 +717,7 @@ class Sniper extends Piece
 }
 
 var sniper = new Sniper
-units[sniper.name] = sniper
+nonBaseSet[sniper.name] = sniper
 
 class Swordsman extends Piece
 {
@@ -737,7 +736,7 @@ class Swordsman extends Piece
 }
 
 var swordsMan = new Swordsman
-units[swordsMan.name] = swordsMan
+nonBaseSet[swordsMan.name] = swordsMan
 
 //name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, health, attackRange, isFlat, canAttack)
 
@@ -751,14 +750,14 @@ class MammaJamma extends Piece
 }
 
 var mammaJamma = new MammaJamma
-units[mammaJamma.name] = mammaJamma
+nonBaseSet[mammaJamma.name] = mammaJamma
 
 //name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, health, attackRange, isFlat, canAttack)
 class PowerPriest extends Piece
 {
   constructor()
   {
-    super("Power Priest", "unit spell: a friendly unit in an adjacent tile gets +2 health", "PP", ["Unit", "Conduit"], 5, 1, 0, 1, 1, 0, false, false)
+    super("Power Priest", "unit spell: a friendly unit in an adjacent tile gets +2 health", "PP", ["Unit", "Conduit"], 5, 1, 0, 2, 1, 0, false, false)
     this.energyDistributionRange = 1
     this.hasUnitSpells = true
     this.spellTarget = "Piece"
@@ -791,15 +790,15 @@ class PowerPriest extends Piece
 }
 
 var powerPriest = new PowerPriest
-units[powerPriest.name] = powerPriest
+nonBaseSet[powerPriest.name] = powerPriest
 
 //name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, health, attackRange, isFlat, canAttack)
-class ElectricWiz extends Piece
+class ElectricWizard extends Piece
 {
   constructor()
   {
-    super("Electric Wiz", "unit spell: deal 1 damage to a target within 2 tiles", "EW", ["Unit", "Caster"], 4, 1, 0, 1, 1, 0, false, false)
-    this.castingRange = 1
+    super("Electric Wizard", "unit spell: deal 1 damage to a target within 2 tiles", "EW", ["Unit", "Caster"], 4, 1, 0, 2, 1, 0, false, false)
+    this.castingRange = 2
     this.hasUnitSpells = true
     this.spellTarget = "Piece"
   }
@@ -817,8 +816,8 @@ class ElectricWiz extends Piece
   }
 }
 
-var electricWiz = new ElectricWiz
-units[electricWiz.name] = electricWiz
+var electricWizard = new ElectricWizard
+baseSet[electricWizard.name] = electricWizard
 
 //name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, health, attackRange, isFlat, canAttack)
 class Blaster extends Piece
@@ -887,7 +886,7 @@ class Blaster extends Piece
 }
 
 var blaster = new Blaster
-units[blaster.name] = blaster
+nonBaseSet[blaster.name] = blaster
 
 //name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, health, attackRange, isFlat, canAttack)
 class Witch extends Piece
@@ -920,20 +919,21 @@ class Witch extends Piece
 }
 
 var witch = new Witch
-units[witch.name] = witch
+nonBaseSet[witch.name] = witch
 
 class Headquarters extends Piece
 {
   constructor()
   {
     super("Headquarters", "", "HQ", ["Building"], 7, 0, 0, 0, 5, 0, false, false)
+    this.minimumEnergyNeededForActivation = 0
     this.energyCapacityProduction = 3
     this.goldProduction = 5
   }
 }
 
 var headquarters = new Headquarters
-buildings[headquarters.name] = headquarters
+baseSet[headquarters.name] = headquarters
 
 //name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, health, attackRange, isFlat, canAttack)
 
@@ -941,8 +941,9 @@ class EnergyTower extends Piece
 {
   constructor()
   {
-    super("Energy Tower", "distribution range = 2", "ET", ["Building", "Conduit"], 4, 1, 0, 0, 4, 0, false, false)
-    this.energyDistributionRange = 2
+    super("Energy Tower", "", "ET", ["Building", "Conduit"], 5, 1, 0, 0, 4, 0, false, false)
+    this.energyDistributionRange = 3
+    this.minimumEnergyNeededForActivation = 0
   }
 
   activate(game)
@@ -959,7 +960,7 @@ class EnergyTower extends Piece
 }
 
 var energyTower = new EnergyTower
-buildings[energyTower.name] = energyTower
+baseSet[energyTower.name] = energyTower
 
 //name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, health, attackRange, isFlat, canAttack)
 
@@ -967,7 +968,7 @@ class PulseStick extends Piece
 {
   constructor()
   {
-    super("Pulse Stick", "at the start of your turn, ALL pieces within 2 tiles of this get +1 energy", "PS", ["Building"], 3, 1, 0, 0, 4, 0, false, false)
+    super("Pulse Stick", "at the start of your turn, all pieces within 2 tiles of this get +1 energy", "PS", ["Building"], 3, 1, 0, 0, 4, 0, false, false)
   }
 
   performStartOfTurnEffects(game)
@@ -990,7 +991,7 @@ class PulseStick extends Piece
 }
 
 var pulseStick = new PulseStick
-buildings[pulseStick.name] = pulseStick
+nonBaseSet[pulseStick.name] = pulseStick
 
 class Hopper extends Piece
 {
@@ -1071,18 +1072,18 @@ class Hopper extends Piece
 
       leadIndex ++
       followIndex ++ 
-    }``
+    }
   }
 }
 
 var hopper = new Hopper
-units[hopper.name] = hopper
+nonBaseSet[hopper.name] = hopper
 
 class AttackDrone extends Piece
 {
   constructor()
   {
-    super("Attack Drone", "+1 energy = +1 strength", "AD", ["Unit"], 3, 2, 0, 1, 1, 1, false, true)
+    super("Attack Drone", "+1 energy = +1 strength", "AD", ["Unit"], 3, 2, 0, 2, 1, 1, false, true)
   }
 
   increaseEnergy(game)
@@ -1103,18 +1104,18 @@ class AttackDrone extends Piece
 }
 
 var attackDrone = new AttackDrone
-units[attackDrone.name] = attackDrone
+nonBaseSet[attackDrone.name] = attackDrone
 
 class BuilderDrone extends Piece
 {
   constructor()
   {
-    super("Builder Drone", "builder", "BD", ["Unit", "Builder"], 2, 1, 0, 5, 1, 0, false, false)
+    super("Builder Drone", "builder", "BD", ["Unit", "Builder"], 2, 1, 0, 2, 1, 0, false, false)
   }
 }
 
 var builderDrone = new BuilderDrone
-units[builderDrone.name] = builderDrone
+baseSet[builderDrone.name] = builderDrone
 
 
 //name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, health, attackRange, isFlat, canAttack
@@ -1122,7 +1123,7 @@ class Drainer extends Piece
 {
   constructor()
   {
-    super("Drainer", "this units attacks reduce the victims energy by 1", "DR", ["Unit"], 5, 1, 1, 2, 2, 1, false, true)
+    super("Drainer", "this units attacks reduce the victims energy by 1", "DR", ["Unit"], 5, 1, 1, 3, 2, 1, false, true)
   }
 
   attack(game, victim)
@@ -1137,13 +1138,13 @@ class Drainer extends Piece
 }
 
 var drainer = new Drainer
-units[drainer.name] = drainer
+nonBaseSet[drainer.name] = drainer
 
 class Techies extends Piece
 {
   constructor()
   {
-    super("Techies", "when this unit dies with 2 energy, deal 5 damage to every piece within 2 tiles", "TC", ["Unit"], 5, 2, 1, 1, 1, 1, false, true)
+    super("Techies", "when this unit dies with 2 energy, deal 5 damage to every piece within 2 tiles", "TC", ["Unit"], 5, 2, 1, 2, 1, 1, false, true)
   }
 
   die(game, killer)
@@ -1172,9 +1173,10 @@ class MagicPowerTower extends Piece
 {
   constructor()
   {
-    super("Magic Power Tower", "casting range = 2, energy distribution range = 2", "MPT", ["Building, Caster, Conduit"], 6, 1, 0, 0, 6, 0, false, false)
-    this.castingRange = 2
-    this.energyDistributionRange = 2
+    super("Magic Power Tower", "", "MT", ["Building, Caster, Conduit"], 6, 1, 0, 0, 6, 0, false, false)
+    this.castingRange = 3
+    this.energyDistributionRange = 3
+    this.minimumEnergyNeededForActivation = 1
   }
 
   activate(game)
@@ -1191,13 +1193,14 @@ class MagicPowerTower extends Piece
 }
 
 var magicPowerTower = new MagicPowerTower
-units[magicPowerTower.name] = magicPowerTower
+nonBaseSet[magicPowerTower.name] = magicPowerTower
 
 class PowerHut extends Piece
 {
   constructor()
   {
     super("Power Hut", "when this piece is built its energy production is set based on its distance from your back wall. distance of 1-3 rows: 1, 4-5: 2, 6: 3, 7: 4, >7: 5", "PH", ["Building"], 5, 1, 0, 0, 3, 0, false, false)
+    this.minimumEnergyNeededForActivation = 0
   }
 
   performOnBuildEffects(game)
@@ -1224,13 +1227,14 @@ class PowerHut extends Piece
 //name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movement, health, attackRange, isFlat, canAttack
 
 var powerHut = new PowerHut
-buildings[powerHut.name] = powerHut
+nonBaseSet[powerHut.name] = powerHut
 
 class GoldHut extends Piece
 {
   constructor()
   {
     super("Gold Hut", "when this piece is built its gold production is set based on its distance from your back wall. distance of 1-3 rows: 1, 4-5: 2, 6: 3, 7: 4, >7: 5", "GH", ["Building"], 5, 1, 0, 0, 3, 0, false, false)
+    this.minimumEnergyNeededForActivation = 0
   }
 
   performOnBuildEffects(game)
@@ -1257,14 +1261,16 @@ class GoldHut extends Piece
 //name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movement, health, attackRange, isFlat, canAttack
 
 var goldHut = new GoldHut
-buildings[goldHut.name] = goldHut
+nonBaseSet[goldHut.name] = goldHut
 
 class CopperSmith extends Piece
 {
   constructor()
   {
     super("Copper Smith", "+1 energy = +1 gold production", "CS", ["Building"], 1, 3, 0, 0, 3, 0, false, false)
-    this.goldProduction = 0
+    this.goldProduction = 1
+    this.minimumEnergyNeededForActivation = 0
+
   }
 
   increaseEnergy(game)
@@ -1286,14 +1292,15 @@ class CopperSmith extends Piece
 //name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movement, health, attackRange, isFlat, canAttack
 
 var copperSmith = new CopperSmith
-buildings[copperSmith.name] = copperSmith
+baseSet[copperSmith.name] = copperSmith
 
 class SilverSmith extends Piece
 {
   constructor()
   {
     super("Silver Smith", "+1 energy = +2 gold production", "SS", ["Building"], 5, 3, 0, 0, 3, 0, false, false)
-    this.goldProduction = 0
+    this.goldProduction = 2
+    this.minimumEnergyNeededForActivation = 0
   }
 
   increaseEnergy(game)
@@ -1314,14 +1321,16 @@ class SilverSmith extends Piece
 }
 
 var silverSmith = new SilverSmith
-buildings[silverSmith.name] = silverSmith
+baseSet[silverSmith.name] = silverSmith
 
 class GoldSmith extends Piece
 {
   constructor()
   {
-    super("Gold Smith", "+1 energy = +3 gold production", "GS", ["Building"], 10, 1, 0, 0, 3, 0, false, false)
-    this.goldProduction = 0
+    super("Gold Smith", "+1 energy = +3 gold production", "GS", ["Building"], 10, 3, 0, 0, 3, 0, false, false)
+    this.goldProduction = 3
+    this.minimumEnergyNeededForActivation = 0
+
   }
 
   increaseEnergy(game)
@@ -1342,7 +1351,7 @@ class GoldSmith extends Piece
 }
 
 var goldSmith = new GoldSmith
-buildings[goldSmith.name] = goldSmith
+baseSet[goldSmith.name] = goldSmith
 
 //name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movement, health, attackRange, isFlat, canAttack
 
@@ -1372,7 +1381,7 @@ class SmallPointsMiner extends Piece
 }
 
 var smallPointsMiner = new SmallPointsMiner
-buildings[smallPointsMiner.name] = smallPointsMiner
+baseSet[smallPointsMiner.name] = smallPointsMiner
 
 class MediumPointsMiner extends Piece
 {
@@ -1400,7 +1409,7 @@ class MediumPointsMiner extends Piece
 }
 
 var mediumPointsMiner= new MediumPointsMiner
-buildings[mediumPointsMiner.name] = mediumPointsMiner
+baseSet[mediumPointsMiner.name] = mediumPointsMiner
 
 class LargePointsMiner extends Piece
 {
@@ -1428,7 +1437,7 @@ class LargePointsMiner extends Piece
 }
 
 var largePointsMiner = new LargePointsMiner
-buildings[largePointsMiner.name] = largePointsMiner
+baseSet[largePointsMiner.name] = largePointsMiner
 
 //name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movement, health, attackRange, isFlat, canAttack
 
@@ -1436,40 +1445,40 @@ class SmallGenerator extends Piece
 {
   constructor()
   {
-    super("Small Generator", "+1 energy capacity -- requires no energy to activate", "SG", ["Building"], 4, 0, 0, 0, 3, 0, false, false)
+    super("Small Generator", "+1 energy capacity", "SG", ["Building"], 4, 0, 0, 0, 3, 0, false, false)
     this.energyCapacityProduction = 1
     this.minimumEnergyNeededForActivation = 0
   }
 }
 
 var smallGenerator = new SmallGenerator
-buildings[smallGenerator.name] = smallGenerator
+baseSet[smallGenerator.name] = smallGenerator
 
 class MediumGenerator extends Piece
 {
   constructor()
   {
-    super("Medium Generator", "+2 energy capacity -- requires no energy to activate", "MG", ["Building"], 7, 0, 0, 0, 3, 0, false, false)
+    super("Medium Generator", "+2 energy capacity", "MG", ["Building"], 7, 0, 0, 0, 3, 0, false, false)
     this.energyCapacityProduction = 2
     this.minimumEnergyNeededForActivation = 0
   }
 }
 
 var mediumGenerator = new MediumGenerator
-buildings[mediumGenerator.name] = mediumGenerator
+baseSet[mediumGenerator.name] = mediumGenerator
 
 class LargeGenerator extends Piece
 {
   constructor()
   {
-    super("Large Generator", "+3 energy capacity -- requires no energy to activate", "LG", ["Building"], 9, 0, 0, 0, 3, 0, false, false)
+    super("Large Generator", "+3 energy capacity", "LG", ["Building"], 9, 0, 0, 0, 3, 0, false, false)
     this.energyCapacityProduction = 3
     this.minimumEnergyNeededForActivation = 0
   }
 }
 
 var largeGenerator = new LargeGenerator
-buildings[largeGenerator.name] = largeGenerator
+baseSet[largeGenerator.name] = largeGenerator
 
 //name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movement, health, attackRange, isFlat, canAttack
 class Blight extends Piece
@@ -1483,11 +1492,10 @@ class Blight extends Piece
 }
 
 var blight = new Blight
-buildings[blight.name] = blight
+baseSet[blight.name] = blight
 
-module.exports.buildings = buildings
-module.exports.units = units
-module.exports.spells = spells
+module.exports.baseSet = baseSet
+module.exports.nonBaseSet = nonBaseSet
 
 /////////utilities//////////
 

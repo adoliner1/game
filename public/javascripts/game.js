@@ -59,7 +59,6 @@ $(function ()
 		if (currentlySelectedTile != null)
 			updateDisplayerFromTile(game.board[currentlySelectedTile.col][currentlySelectedTile.row])
 
-		outlineVPSquares(game.board)
 		updateVictoryPointTokenSupplyDOM(game.victoryPointTokenSupply, game.victoryPointTokenDrip)
 		updateDOMForBoard(game.board)
 	})
@@ -68,15 +67,15 @@ $(function ()
 	{
 		//update client game
 		window.game = newGame
-		game.buildings = convertDictionaryToList(game.buildings)
-		game.units = convertDictionaryToList(game.units)
-		game.spells = convertDictionaryToList(game.spells)
+		console.log(game.baseSet)
+		game.baseSet = convertDictionaryToList(game.baseSet)
+		console.log(game.baseSet)
+		game.nonBaseSet = convertDictionaryToList(game.nonBaseSet)
 		game.redPlayer.Name == readCookie("nickName") ? window.isRedPlayer = true : window.isRedPlayer = false
 
 		clearShops()
-		addPiecesToShop(game.buildings)
-		addPiecesToShop(game.units)
-		addPiecesToShop(game.spells)
+		addBaseSetPiecesToShop(game.baseSet)
+		addNoneBaseSetPiecesToShop(game.nonBaseSet)
 		addStoreClickHandler()
 
 		enableEndPhaseOrEndActionButton(game)
@@ -88,7 +87,7 @@ $(function ()
 		updatePlayerResourcesDOM(true, game.redPlayer)
 		updatePlayerResourcesDOM(false, game.bluePlayer)
 
-		outlineVPSquares(game.board)
+		addResourcesToDisplay(game.board)
 		updateVictoryPointTokenSupplyDOM(game.victoryPointTokenSupply, game.victoryPointTokenDrip)
 		updateDOMForBoard(game.board)
 
@@ -159,12 +158,10 @@ $(function ()
 			window.currentlyClickedStoreTileDOM = $(this)
 			highlightBordersOfDOMObject(currentlyClickedStoreTileDOM)
 
-			if (parentShop.id == 'buildings')
-				currentlySelectedStorePiece = game.buildings[index]
-			else if (parentShop.id == 'units')
-				currentlySelectedStorePiece = game.units[index]
-			else if (parentShop.id == 'spells')
-				currentlySelectedStorePiece = game.spells[index]			
+			if (parentShop.id == 'baseSet')
+				currentlySelectedStorePiece = game.baseSet[index]
+			else if (parentShop.id == 'nonBaseSet')
+				currentlySelectedStorePiece = game.nonBaseSet[index]		
 
 			updateDisplayerFromPiece(currentlySelectedStorePiece)
 
@@ -550,12 +547,10 @@ function unhighlightBordersOfStoreDOMObject(storeDOMObject)
 	if (storeDOMObject != null)
 	{
 		var parentShop = storeDOMObject.closest('table')[0]
-		if (parentShop.id == 'buildings')
-			storeDOMObject.css("border", "1px solid #6b6b47")
-		else if (parentShop.id == 'units')
-			storeDOMObject.css("border", "1px solid #000080")
-		else if (parentShop.id == 'spells')
-			storeDOMObject.css("border", "1px solid #8f246b")
+		if (parentShop.id == 'baseSet')
+			storeDOMObject.css("border", "1px solid #6e6e77")
+		else if (parentShop.id == 'nonBaseSet')
+			storeDOMObject.css("border", "1px solid #753eac")
 	}
 }
 
@@ -649,6 +644,32 @@ function hoverEffectForTileAndPath(tileJQueryObject, isHovering)
 
 }
 
+function addResourcesToDisplay(board)
+{
+	for (var row of board)
+	{
+		for (var tile of row)
+		{
+			var DOMObject = getDOMForTile(tile)
+			if (tile.statuses.includes("Victory Point Tokens*2") || tile.statuses.includes("Victory Point Tokens*3"))
+			{
+				DOMObject.children(".resource").empty()
+				DOMObject.children(".resource").prepend('<img src="../images/victoryPoints.png"/>')
+			}
+			else if (tile.statuses.includes("Energy*2") || tile.statuses.includes("Energy*3"))
+			{
+				DOMObject.children(".resource").empty()
+				DOMObject.children(".resource").prepend('<img src="../images/blueEnergy.png"/>')
+			}
+			else if (tile.statuses.includes("Gold*2") || tile.statuses.includes("Gold*3"))
+			{
+				DOMObject.children(".resource").empty()
+				DOMObject.children(".resource").prepend('<img src="../images/money.png"/>')
+			}
+		}
+	}	
+}
+
 function highlightTilesGreenAndAddHover(tiles)
 {
 	for (tile of tiles)
@@ -701,19 +722,6 @@ function playerOwnsPiece(isRedPlayer, piece)
 	return (isRedPlayer && piece.owner == "Red") || (!isRedPlayer && piece.owner == "Blue")
 }
 
-function outlineVPSquares(board)
-{
-	for (var row of board)
-	{
-		for (var tile of row)
-		{
-			var DOMObject = getDOMForTile(tile)
-			if (tile.statuses.includes("VP1") || tile.statuses.includes("VP2") || tile.statuses.includes("VP3"))
-				DOMObject.css('border', '2px solid #33cc33')				
-		}
-	}
-}
-
 function convertDictionaryToList(dict)
 {
 	var newList = []
@@ -746,24 +754,17 @@ function setAllModesToFalse()
 	moveMode = false
 }
 
-function addPiecesToShop(piecesList)
+function addBaseSetPiecesToShop(baseSet)
 {
-	for (piece of piecesList)
-	{
-		if (piece.types.includes('Building'))
-		{
-			newCell = $("#buildings tr").append('<td>' + piece.boardAvatar + '</td>');
-		}
-		else if (piece.types.includes('Unit'))
-		{
-			newCell = $("#units tr").append('<td>' + piece.boardAvatar + '</td>');
-		}
-		else if (piece.types.includes('Spell'))
-		{
-			newCell = $("#spells tr").append('<td>' + piece.boardAvatar + '</td>');	
-		}
-	}
+	for (piece of baseSet)
+		newCell = $("#baseSet tr").append('<td>' + piece.boardAvatar + '</td>');
 }
+
+function addNoneBaseSetPiecesToShop(nonBaseSet)
+{
+	for (piece of nonBaseSet)
+		newCell = $("#nonBaseSet tr").append('<td>' + piece.boardAvatar + '</td>');	
+} 
 
 function disableAndHideButton(button)
 {
@@ -782,7 +783,11 @@ function updateDisplayerFromPiece(piece)
 	clearDisplayerLists()
 	if (piece == null)
 		return
-	$('#pieceProperties').append($('<li>').text("Piece"))
+
+	if (piece.types.includes("Spell"))
+		$('#pieceProperties').append($('<li>').text("Spell"))
+	else
+		$('#pieceProperties').append($('<li>').text("Piece"))
 	$("#pieceProperties li:first" ).first().css("font-weight", "bold")
 	$("#pieceProperties li:first").css("text-decoration", "underline")
 	for (key of Object.keys(piece))
@@ -797,9 +802,8 @@ function updateDisplayerFromPiece(piece)
 
 function clearShops()
 {
-	$('#buildings tr').empty()
-	$('#units tr').empty()
-	$('#spells tr').empty()	
+	$('#baseSet tr').empty()
+	$('#nonBaseSet tr').empty()
 }
 
 function clearDisplayerLists()
@@ -812,13 +816,9 @@ function clearDisplayerLists()
 function enableEndPhaseOrEndActionButton(game)
 {
 	if (isThisPlayersTurn() && game.phase == "Action")
-	{
 		enableAndShowButton($("#endActionPhaseButton"))
-	}
 	else if (isThisPlayersTurn() && game.phase == "Energize")
-	{
 		enableAndShowButton($("#endTurnButton"))
-	}	
 }
 
 function updateDisplayerFromTile(tile)
