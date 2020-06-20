@@ -15,6 +15,7 @@ $(function ()
 
 	//tiles which can currently be acted on(moved to, attacked, casted on, built on)
 	window.activeTiles = []
+	window.tilesWhichAreHighlightedBecauseTheyCanBeEnergized = []
 	window.tilesThatCanBeMovedToAndThePathsThere = new Map
 
 	//storage variables to pass data between click handlers
@@ -67,15 +68,23 @@ $(function ()
 	{
 		//update client game
 		window.game = newGame
-		console.log(game.baseSet)
 		game.baseSet = convertDictionaryToList(game.baseSet)
-		console.log(game.baseSet)
-		game.nonBaseSet = convertDictionaryToList(game.nonBaseSet)
+		game.nonBaseSetBuildings = convertDictionaryToList(game.nonBaseSetBuildings)
+		game.nonBaseSetUnits = convertDictionaryToList(game.nonBaseSetUnits)
+		game.nonBaseSetSpells = convertDictionaryToList(game.nonBaseSetSpells)
+
 		game.redPlayer.Name == readCookie("nickName") ? window.isRedPlayer = true : window.isRedPlayer = false
 
 		clearShops()
 		addBaseSetPiecesToShop(game.baseSet)
-		addNoneBaseSetPiecesToShop(game.nonBaseSet)
+
+		console.log(game.nonBaseSetBuildings)
+		console.log(game.nonBaseSetUnits)
+		console.log(game.nonBaseSetSpells)
+
+		addNoneBaseSetPiecesToShop(game.nonBaseSetBuildings)
+		addNoneBaseSetPiecesToShop(game.nonBaseSetUnits)
+		addNoneBaseSetPiecesToShop(game.nonBaseSetSpells)
 		addStoreClickHandler()
 
 		enableEndPhaseOrEndActionButton(game)
@@ -141,6 +150,10 @@ $(function ()
 	{
 		unhighlightBordersOfAllCurrentlyHighlightedDOMObjects()
 		disableAllActionButtons()
+		resetTilesColorsAndAddHover(activeTiles)
+		resetTilesColorsAndAddHover(tilesWhichAreHighlightedBecauseTheyCanBeEnergized)
+		activeTiles = []
+		currentlySelectedTile = null
 		updateDisplayerFromTile(null)
 		updateDisplayerFromPiece(null)
 	});
@@ -160,8 +173,12 @@ $(function ()
 
 			if (parentShop.id == 'baseSet')
 				currentlySelectedStorePiece = game.baseSet[index]
-			else if (parentShop.id == 'nonBaseSet')
-				currentlySelectedStorePiece = game.nonBaseSet[index]		
+			else if (parentShop.id == 'nonBaseSetBuildings')
+				currentlySelectedStorePiece = game.nonBaseSetBuildings[index]
+			else if (parentShop.id == 'nonBaseSetUnits')
+				currentlySelectedStorePiece = game.nonBaseSetUnits[index]
+			else
+				currentlySelectedStorePiece = game.nonBaseSetSpells[index]						
 
 			updateDisplayerFromPiece(currentlySelectedStorePiece)
 
@@ -178,7 +195,6 @@ $(function ()
 		e.stopPropagation();
 		window.currentlySelectedInventoryDOM = $(this)
 		highlightBordersOfDOMObject(currentlySelectedInventoryDOM)
-		console.log(currentlySelectedInventoryDOM)
 		var clickedInventoryTile = this	
 		if ((clickedInventoryTile.closest('table').id) == 'redInventory')
 		{
@@ -208,6 +224,7 @@ $(function ()
 	$('#board td').click(function tileClicked(e)
 	{
 		unhighlightBordersOfAllCurrentlyHighlightedDOMObjects()
+		resetTilesColorsAndAddHover(tilesWhichAreHighlightedBecauseTheyCanBeEnergized)
 		disableAllActionButtons()
 		e.stopPropagation();
 		var clickedDOMTableElement = this
@@ -310,6 +327,12 @@ $(function ()
 		{
 			window.flatPiecePotentiallyBeingEnergized = currentlySelectedTile.flatPiece
 			enableAndShowButton($('#energizeFlatPieceButton'))
+		}
+
+		if(currentlySelectedTile.piece != null && currentlySelectedTile.piece.types.includes("Conduit") && currentlySelectedTile.piece.isActive && playerOwnsPiece(isRedPlayer, currentlySelectedTile.piece))
+		{
+			tilesWhichAreHighlightedBecauseTheyCanBeEnergized = getTilesWhichCanBeEnergizedByConduit(currentlySelectedTile, currentlySelectedTile.piece.energyDistributionRange)
+			highlightTilesBlueAndAddHover(tilesWhichAreHighlightedBecauseTheyCanBeEnergized)
 		}
 
 		setAllModesToFalse()
@@ -549,8 +572,13 @@ function unhighlightBordersOfStoreDOMObject(storeDOMObject)
 		var parentShop = storeDOMObject.closest('table')[0]
 		if (parentShop.id == 'baseSet')
 			storeDOMObject.css("border", "1px solid #6e6e77")
-		else if (parentShop.id == 'nonBaseSet')
-			storeDOMObject.css("border", "1px solid #753eac")
+		else if (parentShop.id == 'nonBaseSetBuildings')
+			storeDOMObject.css("border", "1px solid #6e6e77")
+		else if (parentShop.id == 'nonBaseSetUnits')
+			storeDOMObject.css("border", "1px solid #6e6e77")		
+		else
+			storeDOMObject.css("border", "1px solid #6e6e77")		
+
 	}
 }
 
@@ -599,10 +627,16 @@ function updateDOMForTile(tile)
 			DOMObject.children(".flatPiece").css("opacity", "1")
 		else
 			DOMObject.children(".flatPiece").css("opacity", ".5")
+		if(tile.flatPiece.types.includes("Building"))
+			DOMObject.children(".flatPiece").css("background-color", "#bfbfbf")
+
 		assignPieceColor(tile.flatPiece.owner, DOMObject.children(".flatPiece"))
 	}
 	else
+	{
 		DOMObject.children(".flatPiece").html("")
+		DOMObject.children(".flatPiece").css("background-color", "#ffffff")
+	}
 	if (tile.piece != null)
 	{
 		DOMObject.children(".piece").html(tile.piece.boardAvatar)
@@ -610,10 +644,19 @@ function updateDOMForTile(tile)
 			DOMObject.children(".piece").css("opacity", "1")
 		else
 			DOMObject.children(".piece").css("opacity", ".5")
+		if(tile.piece.types.includes("Building"))
+			DOMObject.children(".piece").css("background-color", "#bfbfbf")
+		else
+			DOMObject.children(".piece").css("font-style", "italic")
+
 		assignPieceColor(tile.piece.owner, DOMObject.children(".piece"))		
 	}
 	else
+	{
+		DOMObject.children(".piece").css("font-style", "normal")
 		DOMObject.children(".piece").html("")
+		DOMObject.children(".piece").css("background-color", "#ffffff")		
+	}
 }
 
 function assignPieceColor(owner, DOMObject)
@@ -651,17 +694,17 @@ function addResourcesToDisplay(board)
 		for (var tile of row)
 		{
 			var DOMObject = getDOMForTile(tile)
-			if (tile.statuses.includes("Victory Point Tokens*2") || tile.statuses.includes("Victory Point Tokens*3"))
+			if (tile.statuses.includes("Victory Point Tokens*2") || tile.statuses.includes("Victory Point Tokens*3") || tile.statuses.includes("Victory Point Tokens*1"))
 			{
 				DOMObject.children(".resource").empty()
 				DOMObject.children(".resource").prepend('<img src="../images/victoryPoints.png"/>')
 			}
-			else if (tile.statuses.includes("Energy*2") || tile.statuses.includes("Energy*3"))
+			else if (tile.statuses.includes("Energy*2") || tile.statuses.includes("Energy*3") || tile.statuses.includes("Energy*1"))
 			{
 				DOMObject.children(".resource").empty()
 				DOMObject.children(".resource").prepend('<img src="../images/blueEnergy.png"/>')
 			}
-			else if (tile.statuses.includes("Gold*2") || tile.statuses.includes("Gold*3"))
+			else if (tile.statuses.includes("Gold*2") || tile.statuses.includes("Gold*3") || tile.statuses.includes("Gold*1"))
 			{
 				DOMObject.children(".resource").empty()
 				DOMObject.children(".resource").prepend('<img src="../images/money.png"/>')
@@ -688,6 +731,44 @@ function highlightTilesGreenAndAddHover(tiles)
 			}
 		)
 	}
+}
+
+function highlightTilesBlueAndAddHover(tiles)
+{
+	for (tile of tiles)
+	{
+		var DOMObject = getDOMForTile(tile)
+		DOMObject.css('background-color', '#80bfff')
+		DOMObject.hover
+		(
+			function()
+			{
+				$(this).css("background-color", "#FFFFE0")
+			},
+			function() 
+			{
+				$(this).css("background-color", "#80bfff")
+			}
+		)
+	}
+}
+
+function getTilesWhichCanBeEnergizedByConduit(conduitTile, energyDistributionRange)
+{
+	var gameTiles = []
+    for (var col = 0; col < boardWidth; col++)
+        gameTiles = gameTiles.concat(game.board[col])
+
+	var tilesThatCanBeEnergized = []
+	for (tile of gameTiles)
+	  if (getDistanceBetweenTwoTiles(tile, conduitTile) <= energyDistributionRange && getDistanceBetweenTwoTiles(tile, conduitTile) != 0)
+	    tilesThatCanBeEnergized.push(tile)
+	return tilesThatCanBeEnergized
+}
+
+function getDistanceBetweenTwoTiles(tile1, tile2)
+{
+  return Math.abs(tile1.col - tile2.col) + Math.abs(tile1.row-tile2.row)
 }
 
 function isAttackableTile(tile)
@@ -763,7 +844,14 @@ function addBaseSetPiecesToShop(baseSet)
 function addNoneBaseSetPiecesToShop(nonBaseSet)
 {
 	for (piece of nonBaseSet)
-		newCell = $("#nonBaseSet tr").append('<td>' + piece.boardAvatar + '</td>');	
+	{
+		if(piece.types.includes("Building"))
+			newCell = $("#nonBaseSetBuildings tr").append('<td>' + piece.boardAvatar + '</td>');
+		else if (piece.types.includes("Unit"))
+			newCell = $("#nonBaseSetUnits tr").append('<td>' + piece.boardAvatar + '</td>');
+		else
+			newCell = $("#nonBaseSetSpells tr").append('<td>' + piece.boardAvatar + '</td>');
+	}
 } 
 
 function disableAndHideButton(button)
@@ -803,7 +891,9 @@ function updateDisplayerFromPiece(piece)
 function clearShops()
 {
 	$('#baseSet tr').empty()
-	$('#nonBaseSet tr').empty()
+	$('#nonBaseSetBuildings tr').empty()
+	$('#nonBaseSetSpells tr').empty()
+	$('#nonBaseSetUnits tr').empty()
 }
 
 function clearDisplayerLists()
@@ -840,8 +930,9 @@ function updateDisplayerFromTile(tile)
 	{
 		if (key != "piece")
 		{
-			var propertyStringDisplay = ("" + key + ": " + tile[key]) 
-			$('#tileProperties').append($('<li>').text(propertyStringDisplay))			
+			var propertyStringDisplay = ("" + key + ": " + tile[key])
+			if (key != "piece" && key != "flatPiece")
+				$('#tileProperties').append($('<li>').text(propertyStringDisplay))			
 		}
 	}		
 
@@ -861,7 +952,7 @@ function updateDisplayerFromTile(tile)
 	{
 		for (key of Object.keys(tile.flatPiece))
 		{
-			if (key != "boardAvatar" && key != "owner" && key != "canAttack" && key != "canReceiveFreeEnergyAtThisLocation" && key != "currentCol" && key != "currentRow" && key != "isActive" && tile.piece[key] != 0)
+			if (key != "boardAvatar" && key != "owner" && key != "canAttack" && key != "canReceiveFreeEnergyAtThisLocation" && key != "currentCol" && key != "currentRow" && key != "isActive" && tile.flatPiece[key] != 0)
 			{
 				var propertyStringDisplay = ("" + key + ": " + tile.flatPiece[key]) 
 				$('#flatPieceProperties').append($('<li>').text(propertyStringDisplay))

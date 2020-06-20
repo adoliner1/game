@@ -1,5 +1,9 @@
 var baseSet = {}
 var nonBaseSet = {}
+var nonBaseSetSpells = {}
+var nonBaseSetUnits = {}
+var nonBaseSetBuildings = {}
+
 var _ = require('lodash');
 
 const boardLength = 15;
@@ -26,7 +30,7 @@ class Surge extends Spell
 {
   constructor()
   {
-    super("Surge", "+1 energy to a friendly piece in range of a Caster", ["Spell"], 3, "SU", "Piece")
+    super("Surge", "+1 energy to a friendly piece", ["Spell"], 3, "SU", "Piece")
   }
 
   getTilesWhichCanBeCastOn(game)
@@ -35,7 +39,7 @@ class Surge extends Spell
       var isRedPlayer = true
     else
       var isRedPlayer = false
-    return getTilesWherePiecesDontHaveFullEnergy(getTilesWithAFriendlyPieceOrAFriendlyFlatPiece(isRedPlayer, getTilesInRangeOfAFriendlyCaster(game, this.owner)))
+    return getTilesWherePiecesDontHaveFullEnergy(getTilesWithAFriendlyPieceOrAFriendlyFlatPiece(isRedPlayer, getTilesInRangeOfAFriendlyActiveCaster(game, this.owner)))
   }
 
   cast(game, targetPiece)
@@ -45,13 +49,14 @@ class Surge extends Spell
 }
 
 var surge = new Surge
-nonBaseSet[surge.name] = surge
+nonBaseSet[surge.name] = surge.name
+nonBaseSetSpells[surge.name] = surge
 
 class GlobalSurge extends Spell
 {
   constructor()
   {
-    super("Global Surge", "+1 energy to a friendly piece", ["Spell"], 5, "GS", "Piece")
+    super("Global Surge", "+1 energy to a friendly piece anywhere", ["Spell"], 5, "GS", "Piece")
   }
 
   getTilesWhichCanBeCastOn(game)
@@ -71,13 +76,13 @@ class GlobalSurge extends Spell
 
 var globalSurge = new GlobalSurge
 nonBaseSet[globalSurge.name] = globalSurge
-
+nonBaseSetSpells[globalSurge.name] = globalSurge
 
 class Empower extends Spell
 {
   constructor()
   {
-    super("Empower", "+1 strength to a friendly piece", ["Spell"], 3, "EM", "Piece")
+    super("Empower", "+1 strength to a friendly piece with greater than 0 strength", ["Spell"], 3, "EM", "Piece")
   }
 
   getTilesWhichCanBeCastOn(game)
@@ -86,7 +91,7 @@ class Empower extends Spell
       var isRedPlayer = true
     else
       var isRedPlayer = false
-    return getTilesWithAFriendlyPieceOrAFriendlyFlatPiece(isRedPlayer, game.getAllTilesInListForm())
+    return getTilesWithMoreThanZeroStrength(getTilesWithAFriendlyPieceOrAFriendlyFlatPiece(isRedPlayer, getTilesInRangeOfAFriendlyActiveCaster(game, this.owner)))
   }
 
   cast(game, targetPiece)
@@ -97,6 +102,7 @@ class Empower extends Spell
 
 var empower = new Empower
 nonBaseSet[empower.name] = empower
+nonBaseSetSpells[empower.name] = empower
 
 class Accelerate extends Spell
 {
@@ -111,7 +117,7 @@ class Accelerate extends Spell
       var isRedPlayer = true
     else
       var isRedPlayer = false
-    return getTilesWithPiecesWithMovementCapacityHigherThanZero(getTilesWithAFriendlyPieceOrAFriendlyFlatPiece(isRedPlayer, game.getAllTilesInListForm()))
+    return getTilesWithPiecesWithMovementCapacityHigherThanZero(getTilesWithAFriendlyPieceOrAFriendlyFlatPiece(isRedPlayer, getTilesInRangeOfAFriendlyActiveCaster(game, this.owner)))
   }
 
   cast(game, targetPiece)
@@ -122,6 +128,7 @@ class Accelerate extends Spell
 
 var accelerate = new Accelerate
 nonBaseSet[accelerate.name] = accelerate
+nonBaseSetSpells[accelerate.name] = accelerate
 
 class QuickFoot extends Spell
 {
@@ -136,7 +143,7 @@ class QuickFoot extends Spell
       var isRedPlayer = true
     else
       var isRedPlayer = false
-    return getTilesWithPiecesWithMovementCapacityHigherThanZero(getTilesWithAFriendlyPieceOrAFriendlyFlatPiece(isRedPlayer, game.getAllTilesInListForm()))
+    return getTilesWithPiecesWithMovementCapacityHigherThanZero(getTilesWithAFriendlyPieceOrAFriendlyFlatPiece(isRedPlayer, getTilesInRangeOfAFriendlyActiveCaster(game, this.owner)))
   }
 
   cast(game, targetPiece)
@@ -147,17 +154,18 @@ class QuickFoot extends Spell
 
 var quickFoot = new QuickFoot
 nonBaseSet[quickFoot.name] = quickFoot
+nonBaseSetSpells[quickFoot.name] = quickFoot
 
 class LittleMissle extends Spell
 {
   constructor()
   {
-    super("Little Missle", "deal 1 damage to a unit within range of a friendly Caster", ["Spell"], 3, "LM", "Piece")
+    super("Little Missle", "deal 1 damage to a unit", ["Spell"], 3, "LM", "Piece")
   }
 
   getTilesWhichCanBeCastOn(game)
   {
-    return getTilesWithAPieceOrAFlatPiece(getTilesInRangeOfAFriendlyCaster(game, this.owner))
+    return getTilesWithAPieceOrAFlatPiece(getTilesInRangeOfAFriendlyActiveCaster(game, this.owner))
   }
 
   cast(game, targetPiece)
@@ -168,18 +176,19 @@ class LittleMissle extends Spell
 
 var littleMissle = new LittleMissle
 nonBaseSet[littleMissle.name] = littleMissle
+nonBaseSetSpells[littleMissle.name] = littleMissle
 
 class Detonate extends Spell
 {
   constructor()
   {
-    super("Detonate", "destroy a target friendly unit within range of a Caster. All pieces and flat pieces adjacent to it take 5 damage", ["Spell"], 4, "DT", "Piece")
+    super("Detonate", "destroy a target friendly unit. All pieces and flat pieces adjacent to it take 5 damage", ["Spell"], 4, "DT", "Piece")
   }
 
   getTilesWhichCanBeCastOn(game)
   {
     var isRedPlayer = this.owner == "Red" ? true : false 
-    return getTilesWithAFriendlyPieceOrAFriendlyFlatPiece(isRedPlayer, getTilesInRangeOfAFriendlyCaster(game, this.owner))
+    return getTilesWithAFriendlyPieceOrAFriendlyFlatPiece(isRedPlayer, getTilesInRangeOfAFriendlyActiveCaster(game, this.owner))
   }
 
   cast(game, targetPiece)
@@ -199,6 +208,8 @@ class Detonate extends Spell
 
 var detonate = new Detonate
 nonBaseSet[detonate.name] = detonate
+nonBaseSetSpells[detonate.name] = detonate
+
 
 ////////////////////////////
 //pieces
@@ -244,8 +255,6 @@ class Piece
   canReceiveFreeEnergy(game)
   {
     var pieceTile = this.getCurrentTile(game)
-    if ((this.owner == "Red" && pieceTile.row < 3) || (this.owner == "Blue" && pieceTile.row > 11))
-      return true
     return tileIsInRangeOfFriendlyConduit(game, this.owner, pieceTile)
   }
 
@@ -342,19 +351,13 @@ class Piece
   {
     var buildableTiles = []
     if (this.owner == 'Red')
-    {
-      var friendlyTiles = game.getRedFriendlyTiles() 
-      var tilesNextToFriendlyBuilders = getTilesNextToFriendlyBuilders(game, true)
-    }
+      var tilesNextToFriendlyBuilders = getTilesNextToFriendlyActiveBuilders(game, true)
     else
-    {
-      var friendlyTiles = game.getBlueFriendlyTiles() 
-      var tilesNextToFriendlyBuilders = getTilesNextToFriendlyBuilders(game, false)
-    }
+      var tilesNextToFriendlyBuilders = getTilesNextToFriendlyActiveBuilders(game, false)
     if(this.isFlat)
-      return getTilesWithoutAFlatPieceAndWithoutAPiece(friendlyTiles.concat(tilesNextToFriendlyBuilders))
+      return getTilesWithoutAFlatPieceAndWithoutAPiece((tilesNextToFriendlyBuilders))
     else
-      return getTilesWithoutAPiece(friendlyTiles.concat(tilesNextToFriendlyBuilders))
+      return getTilesWithoutAPiece((tilesNextToFriendlyBuilders))
   }
 
   increaseHealth(amount)
@@ -475,6 +478,7 @@ class MovementPad extends Piece
 
 var movementPad = new MovementPad
 nonBaseSet[movementPad.name] = movementPad
+nonBaseSetBuildings[movementPad.name] = movementPad
 
 class BoostPad extends Piece
 {
@@ -538,6 +542,7 @@ class BoostPad extends Piece
 
 var boostPad = new BoostPad
 nonBaseSet[boostPad.name] = boostPad
+nonBaseSetBuildings[boostPad.name] = boostPad
 
 class EnergyPad extends Piece
 {
@@ -559,29 +564,20 @@ class EnergyPad extends Piece
 
 var energyPad = new EnergyPad
 nonBaseSet[energyPad.name] = energyPad
+nonBaseSetBuildings[energyPad.name] = energyPad
 
 //name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, health, attackRange, isFlat, canAttack)
 class Wall extends Piece
 {
   constructor()
   {
-    super("Wall", "has no energy capacity, cannot be activated", "WA", ["Building"], 1, 0, 0, 0, 3, 0, false, false)    
+    super("Wall", "has no energy capacity, cannot be activated", "WA", ["Building"], 2, 0, 0, 0, 1, 0, false, false)    
   }
 }
 
 var wall = new Wall
 nonBaseSet[wall.name] = wall
-
-class GreaterWall extends Piece
-{
-  constructor()
-  {
-    super("Greater Wall", "has no energy capacity, cannot be activated", "WA", ["Building"], 3, 0, 0, 0, 7, 0, false, false)    
-  }
-}
-
-var greaterWall = new GreaterWall
-nonBaseSet[greaterWall.name] = greaterWall
+nonBaseSetBuildings[wall.name] = wall
 
 class SpikeTrap extends Piece
 {
@@ -608,6 +604,7 @@ class SpikeTrap extends Piece
 
 var spikeTrap = new SpikeTrap
 nonBaseSet[spikeTrap.name] = spikeTrap
+nonBaseSetBuildings[spikeTrap.name] = spikeTrap
 
 class Archer extends Piece
 {
@@ -643,6 +640,8 @@ class Archer extends Piece
 
 var archer = new Archer
 nonBaseSet[archer.name] = archer
+nonBaseSetUnits[archer.name] = archer
+
 //name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, health, attackRange, isFlat, canAttack)
 
 class PhaserBoy extends Piece
@@ -671,6 +670,7 @@ class PhaserBoy extends Piece
 
 var phaserBoy = new PhaserBoy
 nonBaseSet[phaserBoy.name] = phaserBoy
+nonBaseSetUnits[phaserBoy.name] = phaserBoy
 
 class Scrapper extends Piece
 {
@@ -697,6 +697,7 @@ class Scrapper extends Piece
 
 var scrapper = new Scrapper
 nonBaseSet[scrapper.name] = scrapper
+nonBaseSetUnits[scrapper.name] = scrapper
 
 
 //name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, health, attackRange, isFlat, canAttack)
@@ -718,6 +719,7 @@ class Sniper extends Piece
 
 var sniper = new Sniper
 nonBaseSet[sniper.name] = sniper
+nonBaseSetUnits[sniper.name] = sniper
 
 class Swordsman extends Piece
 {
@@ -737,6 +739,7 @@ class Swordsman extends Piece
 
 var swordsMan = new Swordsman
 nonBaseSet[swordsMan.name] = swordsMan
+nonBaseSetUnits[swordsMan.name] = swordsMan
 
 //name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, health, attackRange, isFlat, canAttack)
 
@@ -751,6 +754,8 @@ class MammaJamma extends Piece
 
 var mammaJamma = new MammaJamma
 nonBaseSet[mammaJamma.name] = mammaJamma
+nonBaseSetUnits[mammaJamma.name] = mammaJamma
+
 
 //name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, health, attackRange, isFlat, canAttack)
 class PowerPriest extends Piece
@@ -791,6 +796,7 @@ class PowerPriest extends Piece
 
 var powerPriest = new PowerPriest
 nonBaseSet[powerPriest.name] = powerPriest
+nonBaseSetUnits[powerPriest.name] = powerPriest
 
 //name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, health, attackRange, isFlat, canAttack)
 class ElectricWizard extends Piece
@@ -887,6 +893,7 @@ class Blaster extends Piece
 
 var blaster = new Blaster
 nonBaseSet[blaster.name] = blaster
+nonBaseSetUnits[blaster.name] = blaster
 
 //name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, health, attackRange, isFlat, canAttack)
 class Witch extends Piece
@@ -920,15 +927,19 @@ class Witch extends Piece
 
 var witch = new Witch
 nonBaseSet[witch.name] = witch
+nonBaseSetUnits[witch.name] = witch
+
 
 class Headquarters extends Piece
 {
   constructor()
   {
-    super("Headquarters", "", "HQ", ["Building"], 7, 0, 0, 0, 5, 0, false, false)
+    super("Headquarters", "This piece doesn't need to be on a resource tile to produce gold and energy", "HQ", ["Building", "Conduit", "Caster"], 7, 0, 0, 0, 10, 0, false, false)
     this.minimumEnergyNeededForActivation = 0
-    this.energyCapacityProduction = 3
+    this.energyCapacityProduction = 6
     this.goldProduction = 5
+    this.energyDistributionRange = 4
+    this.castingRange = 5
   }
 }
 
@@ -992,6 +1003,7 @@ class PulseStick extends Piece
 
 var pulseStick = new PulseStick
 nonBaseSet[pulseStick.name] = pulseStick
+nonBaseSetBuildings[pulseStick.name] = pulseStick
 
 class Hopper extends Piece
 {
@@ -1078,6 +1090,7 @@ class Hopper extends Piece
 
 var hopper = new Hopper
 nonBaseSet[hopper.name] = hopper
+nonBaseSetUnits[hopper.name] = hopper
 
 class AttackDrone extends Piece
 {
@@ -1105,6 +1118,7 @@ class AttackDrone extends Piece
 
 var attackDrone = new AttackDrone
 nonBaseSet[attackDrone.name] = attackDrone
+nonBaseSetUnits[attackDrone.name] = attackDrone
 
 class BuilderDrone extends Piece
 {
@@ -1116,7 +1130,6 @@ class BuilderDrone extends Piece
 
 var builderDrone = new BuilderDrone
 baseSet[builderDrone.name] = builderDrone
-
 
 //name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, health, attackRange, isFlat, canAttack
 class Drainer extends Piece
@@ -1139,6 +1152,7 @@ class Drainer extends Piece
 
 var drainer = new Drainer
 nonBaseSet[drainer.name] = drainer
+nonBaseSetUnits[drainer.name] = drainer
 
 class Techies extends Piece
 {
@@ -1173,7 +1187,7 @@ class MagicPowerTower extends Piece
 {
   constructor()
   {
-    super("Magic Power Tower", "", "MT", ["Building, Caster, Conduit"], 6, 1, 0, 0, 6, 0, false, false)
+    super("Magic Power Tower", "", "MT", ["Building", "Caster", "Conduit"], 6, 1, 0, 0, 6, 0, false, false)
     this.castingRange = 3
     this.energyDistributionRange = 3
     this.minimumEnergyNeededForActivation = 1
@@ -1194,6 +1208,7 @@ class MagicPowerTower extends Piece
 
 var magicPowerTower = new MagicPowerTower
 nonBaseSet[magicPowerTower.name] = magicPowerTower
+nonBaseSetBuildings[magicPowerTower.name] = magicPowerTower
 
 class PowerHut extends Piece
 {
@@ -1228,6 +1243,7 @@ class PowerHut extends Piece
 
 var powerHut = new PowerHut
 nonBaseSet[powerHut.name] = powerHut
+nonBaseSetBuildings[powerHut.name] = powerHut
 
 class GoldHut extends Piece
 {
@@ -1262,15 +1278,13 @@ class GoldHut extends Piece
 
 var goldHut = new GoldHut
 nonBaseSet[goldHut.name] = goldHut
+nonBaseSetBuildings[goldHut.name] = goldHut
 
 class CopperSmith extends Piece
 {
   constructor()
   {
     super("Copper Smith", "+1 energy = +1 gold production", "CS", ["Building"], 1, 3, 0, 0, 3, 0, false, false)
-    this.goldProduction = 1
-    this.minimumEnergyNeededForActivation = 0
-
   }
 
   increaseEnergy(game)
@@ -1299,8 +1313,6 @@ class SilverSmith extends Piece
   constructor()
   {
     super("Silver Smith", "+1 energy = +2 gold production", "SS", ["Building"], 5, 3, 0, 0, 3, 0, false, false)
-    this.goldProduction = 2
-    this.minimumEnergyNeededForActivation = 0
   }
 
   increaseEnergy(game)
@@ -1328,9 +1340,6 @@ class GoldSmith extends Piece
   constructor()
   {
     super("Gold Smith", "+1 energy = +3 gold production", "GS", ["Building"], 10, 3, 0, 0, 3, 0, false, false)
-    this.goldProduction = 3
-    this.minimumEnergyNeededForActivation = 0
-
   }
 
   increaseEnergy(game)
@@ -1496,9 +1505,11 @@ baseSet[blight.name] = blight
 
 module.exports.baseSet = baseSet
 module.exports.nonBaseSet = nonBaseSet
+module.exports.nonBaseSetUnits = nonBaseSetUnits
+module.exports.nonBaseSetBuildings = nonBaseSetBuildings
+module.exports.nonBaseSetSpells = nonBaseSetSpells
 
 /////////utilities//////////
-
 function updatePiecesWhichCanReceiveFreeEnergy(game)
 {
   for (var tile of game.getAllTilesInListForm())
@@ -1524,7 +1535,7 @@ function tileIsInRangeOfFriendlyConduit(game, playerColor, tile)
   return false
 }
 
-function getTilesInRangeOfAFriendlyCaster(game, playerColor)
+function getTilesInRangeOfAFriendlyActiveCaster(game, playerColor)
 {
   var newTiles = []
   var casterTiles = getTilesWithFriendlyActiveCasters(game.getAllTilesInListForm(), playerColor)
@@ -1534,6 +1545,17 @@ function getTilesInRangeOfAFriendlyCaster(game, playerColor)
       newTiles.push(tile)
   }
   return newTiles
+}
+
+function getTilesWithMoreThanZeroStrength(tiles)
+{
+  var newTiles = []
+  for (var tile of tiles)
+  {
+    if (tile.piece != null && tile.strength > 0)
+      newTiles.push(tile)
+  }
+  return newTiles  
 }
 
 function getTilesWithUnits(tiles)
@@ -1757,7 +1779,7 @@ function playerOwnsPiece(isRedPlayer, piece)
   return (isRedPlayer && piece.owner == "Red") || (!isRedPlayer && piece.owner == "Blue")
 }
 
-function getTilesNextToFriendlyBuilders(game, isRedPlayer)
+function getTilesNextToFriendlyActiveBuilders(game, isRedPlayer)
 {
   var friendlyBuilderLocations = getTilesWithActiveFriendlyBuilders(game.getAllTilesInListForm(), isRedPlayer)
   var newTiles = []

@@ -9,11 +9,10 @@ td:hover {background-color: #FFFFE0;}
 
 #victoryPointTokenSupply {position: absolute; top: 47%; left: 60%; color: #33cc33; font-weight: bold;}
 
-.flatPiece {position: absolute; left: 27%; bottom: 5%; font-weight: bold; background-color: transparent;} 
-.piece {position: absolute; left: 27%; top: 5%; font-weight: bold; background-color: transparent;}
-.resource {position: absolute; height: 33%; width: 33%; right: 5%; top: 55%; background-color: transparent;}
+.flatPiece {position: absolute; font-size: 14px; left: 27%; bottom: 5%; font-weight: 500; background-color: transparent;} 
+.piece {position: absolute; font-size: 14px; left: 27%; top: 5%; font-weight: 500; background-color: transparent;}
+.resource {position: absolute; height: 25%; width: 25%; right: 5%; top: 60%; background-color: transparent;}
 .resource img {max-width: 100%; max-height: 100%; display: block; background-color: transparent;}
-
 
 #blueInventory {position: absolute; left: 70%; top: 84%; height: 5%; width: 20%;}
 #blueInventory td {position: relative; border: 1px solid #0000b3; width: 20%; text-align: center; vertical-align: center}
@@ -35,7 +34,7 @@ button:active {background-color: #ff9933;}
 
 #displayerAndShopAndButtonsAndLogSection {position: absolute; border: 1px solid #000000; height: 100%; width: 40%; left: 60%;}
 
-#displayer {position: absolute; height: 70%; width: 100%;}
+#displayer {position: absolute; height: 60%; width: 100%;}
 #pieceProperties {list-style-type: none; height: 50%; width: 100%; top: 0%; position: absolute; overflow: scroll;}
 #pieceProperties li { padding: 5px 10px; width: 100%;}
 #flatPieceProperties {list-style-type: none; height: 25%; width: 100%; top: 50%; position: absolute; overflow: scroll; border-top: 1px solid #000000;}
@@ -43,12 +42,12 @@ button:active {background-color: #ff9933;}
 #tileProperties {list-style-type: none; height: 25%; width: 100%; top: 75%; position: absolute; overflow: scroll; border-top: 1px solid #000000;}
 #tileProperties li { padding: 5px 10px; width: 100%;}
 
-#stores {position: absolute; top: 70%; height: 15%; width: 100%; border-top: 1px solid #000000;}
-#baseSet {position: absolute; left: 1%; top: 5%;}
-#baseSet td {border: 1px solid #6e6e77;}
-#nonBaseSet {position: absolute; left: 1%; top: 60%;}
-#nonBaseSet td {border: 1px solid #753eac;}
-#stores td {width: 40px; height: 40px; text-align: center; vertical-align: center}
+#stores {position: absolute; top: 60%; height: 25%; width: 100%; border-top: 1px solid #000000;}
+#baseSet {left: 1%; color: grey;}
+#nonBaseSetBuildings { left: 1%; color: brown;}
+#nonBaseSetUnits {left: 1%; color: purple;}
+#nonBaseSetSpells {left: 1%; color: teal;}
+#stores td {width: 40px; height: 40px; text-align: center; vertical-align: center; border: 2px solid #6e6e77;}
 
 #log {list-style-type: none; height: 15%; border-top: 1px solid #000000; width: 100%; position: absolute; top: 85%; overflow: scroll;}
 #log li { padding: 5px 10px; width: 100%;}
