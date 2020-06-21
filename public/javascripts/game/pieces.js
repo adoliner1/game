@@ -1,18 +1,12 @@
 var _ = require('lodash');
 var utils = require('./piece_utils');
+var constants = require('./constants');
 
 var baseSet = {}
 var nonBaseSet = {}
 var nonBaseSetSpells = {}
 var nonBaseSetUnits = {}
 var nonBaseSetBuildings = {}
-
-const boardLength = 15;
-const boardWidth = 9;
-const startOfRedTiles = 0
-const endOfRedTiles = 3
-const startOfBlueTiles = 12
-const endOfBlueTiles = 15
 
 class Spell
 {
@@ -510,7 +504,7 @@ class BoostPad extends Piece
 
       var path = []
       var spacesToMove = 3
-      while (spacesToMove > 0 && piecesCurrentTile.col + direction.colDelta >= 0 && piecesCurrentTile.col + direction.colDelta < boardWidth && piecesCurrentTile.row + direction.rowDelta >= 0 && piecesCurrentTile.row + direction.rowDelta < boardLength)
+      while (spacesToMove > 0 && piecesCurrentTile.col + direction.colDelta >= 0 && piecesCurrentTile.col + direction.colDelta < constants.boardWidth && piecesCurrentTile.row + direction.rowDelta >= 0 && piecesCurrentTile.row + direction.rowDelta < constants.boardLength)
       {
         var tileToAddToPath = game.board[piecesCurrentTile.col + direction.colDelta][piecesCurrentTile.row + direction.rowDelta]
         if (tileToAddToPath.piece != null)
@@ -866,7 +860,7 @@ class Blaster extends Piece
 
     while (spacesToMove > 0)
     {
-      if (targetsCurrentTile.col + direction.colDelta < 0 || targetsCurrentTile.col + direction.colDelta > boardWidth || targetsCurrentTile.row + direction.rowDelta < 0 || targetsCurrentTile.row + direction.rowDelta > boardLength)
+      if (targetsCurrentTile.col + direction.colDelta < 0 || targetsCurrentTile.col + direction.colDelta > constants.boardWidth || targetsCurrentTile.row + direction.rowDelta < 0 || targetsCurrentTile.row + direction.rowDelta > constants.boardLength)
       {
         targetPiece.moveWithoutExpendingMovement(game, path)
         targetPiece.takeDamage(game, this, 1)
@@ -1225,7 +1219,7 @@ class PowerHut extends Piece
     if (this.owner == "Red")
       var distanceFromBackWall = pieceTile.row + 1
     else
-      var distanceFromBackWall = boardLength - pieceTile.row
+      var distanceFromBackWall = constants.boardLength - pieceTile.row
       
     if (distanceFromBackWall <= 3)
       this.energyCapacityProduction = 1
@@ -1260,7 +1254,7 @@ class GoldHut extends Piece
     if (this.owner == "Red")
       var distanceFromBackWall = pieceTile.row + 1
     else
-      var distanceFromBackWall = boardLength - pieceTile.row
+      var distanceFromBackWall = constants.boardLength - pieceTile.row
       
     if (distanceFromBackWall <= 3)
       this.goldProduction = 1

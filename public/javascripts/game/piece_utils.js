@@ -1,9 +1,4 @@
-const boardLength = 15;
-const boardWidth = 9;
-const startOfRedTiles = 0
-const endOfRedTiles = 3
-const startOfBlueTiles = 12
-const endOfBlueTiles = 15
+var constants = require('./constants');
 
 function updatePiecesWhichCanReceiveFreeEnergy(game)
 {
@@ -122,7 +117,7 @@ function findFirstPieceInDirectionFromCenterTileAddingFlatPiecesWithinRange(boar
   var currentCol = centerTile.col + direction.colDelta
   var currentRow =  centerTile.row + direction.rowDelta
   var tilesTraveled = 1
-  while (currentCol < boardWidth && currentRow < boardLength && currentCol >= 0 && currentRow >= 0 && tilesTraveled <= range)
+  while (currentCol < constants.boardWidth && currentRow < constants.boardLength && currentCol >= 0 && currentRow >= 0 && tilesTraveled <= range)
   {
     var currentTile = board[currentCol][currentRow]
     if (currentTile.piece != null)
@@ -214,11 +209,11 @@ function getTilesTwoAwayFromTileInLine(board, tile)
   var tilesTwoAwayFromTileInLine = []
   if (tile.row - 2 >= 0)
     tilesTwoAwayFromTileInLine.push(board[tile.col][tile.row-2])
-  if (tile.row + 2 < boardLength)
+  if (tile.row + 2 < constants.boardLength)
     tilesTwoAwayFromTileInLine.push(board[tile.col][tile.row+2])
   if (tile.col - 2 >= 0)
     tilesTwoAwayFromTileInLine.push(board[tile.col-2][tile.row])
-  if (tile.col + 2 < boardWidth)
+  if (tile.col + 2 < constants.boardWidth)
     tilesTwoAwayFromTileInLine.push(board[tile.col+2][tile.row])
   return tilesTwoAwayFromTileInLine  
 }
@@ -412,11 +407,11 @@ function getAdjacentTiles(board, tile)
   var adjacentTiles = []
   if (tile.row - 1 >= 0)
     adjacentTiles.push(board[tile.col][tile.row-1])
-  if (tile.row + 1 < boardLength)
+  if (tile.row + 1 < constants.boardLength)
     adjacentTiles.push(board[tile.col][tile.row+1])
   if (tile.col - 1 >= 0)
     adjacentTiles.push(board[tile.col-1][tile.row])
-  if (tile.col + 1 < boardWidth)
+  if (tile.col + 1 < constants.boardWidth)
     adjacentTiles.push(board[tile.col+1][tile.row])
   return adjacentTiles
 }
