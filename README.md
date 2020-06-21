@@ -3,5 +3,5 @@
 Run Server
 ===
 * npm install
-* run ./bin/www
+* run `npm start`
 * visit localhost:8080
