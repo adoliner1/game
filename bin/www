@@ -7,7 +7,7 @@
 var app = require('../app');
 var debug = require('debug')('pugpractice:server');
 var http = require('http');
-var pieces = require('../public/javascripts/pieces.js')
+var pieces = require('../public/javascripts/game/pieces.js')
 var _ = require('lodash');
 
 /**

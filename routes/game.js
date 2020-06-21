@@ -9,5 +9,4 @@ router.get('/*', function(req, res, next) {
   res.render('game', { title: 'Game' });
 });
 
-
 module.exports = router;

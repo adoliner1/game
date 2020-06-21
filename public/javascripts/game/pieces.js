@@ -1,10 +1,10 @@
+var _ = require('lodash');
+
 var baseSet = {}
 var nonBaseSet = {}
 var nonBaseSetSpells = {}
 var nonBaseSetUnits = {}
 var nonBaseSetBuildings = {}
-
-var _ = require('lodash');
 
 const boardLength = 15;
 const boardWidth = 9;
