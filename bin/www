@@ -7,7 +7,7 @@
 var app = require('../app');
 var debug = require('debug')('pugpractice:server');
 var http = require('http');
-var pieces = require('../public/javascripts/pieces.js')
+var pieces = require('../public/javascripts/game/pieces.js')
 var _ = require('lodash');
 
 /**
@@ -683,12 +683,16 @@ io.on('connection', function(socket)
     }
 
     var piece = game.baseSet[clientPiece.name]
-    if (piece == null && clientPiece.types.includes("Building"))
-      var piece = game.nonBaseSetBuildings[clientPiece.name]
-    else if (clientPiece.types.includes("Unit"))
-      var piece = game.nonBaseSetUnits[clientPiece.name]
-    else
-      var piece = game.nonBaseSetSpells[clientPiece.name]
+
+    // TODO extract finding a piece to a helper
+    if (piece == null) {
+      if (clientPiece.types.includes("Building"))
+        piece = game.nonBaseSetBuildings[clientPiece.name]
+      else if (clientPiece.types.includes("Unit"))
+        piece = game.nonBaseSetUnits[clientPiece.name]
+      else
+        piece = game.nonBaseSetSpells[clientPiece.name]
+    }
 
     if (piece == null)
     {

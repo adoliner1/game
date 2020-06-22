@@ -1,3 +1,0 @@
-fix cookie, name problems.. need to use chrome still?
-
-overall styling for game

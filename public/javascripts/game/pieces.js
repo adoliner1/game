@@ -1,17 +1,12 @@
+var _ = require('lodash');
+var utils = require('./piece_utils');
+var constants = require('./constants');
+
 var baseSet = {}
 var nonBaseSet = {}
 var nonBaseSetSpells = {}
 var nonBaseSetUnits = {}
 var nonBaseSetBuildings = {}
-
-var _ = require('lodash');
-
-const boardLength = 15;
-const boardWidth = 9;
-const startOfRedTiles = 0
-const endOfRedTiles = 3
-const startOfBlueTiles = 12
-const endOfBlueTiles = 15
 
 class Spell
 {
@@ -39,7 +34,7 @@ class Surge extends Spell
       var isRedPlayer = true
     else
       var isRedPlayer = false
-    return getTilesWherePiecesDontHaveFullEnergy(getTilesWithAFriendlyPieceOrAFriendlyFlatPiece(isRedPlayer, getTilesInRangeOfAFriendlyActiveCaster(game, this.owner)))
+    return utils.getTilesWherePiecesDontHaveFullEnergy(utils.getTilesWithAFriendlyPieceOrAFriendlyFlatPiece(isRedPlayer, utils.getTilesInRangeOfAFriendlyActiveCaster(game, this.owner)))
   }
 
   cast(game, targetPiece)
@@ -65,7 +60,7 @@ class GlobalSurge extends Spell
       var isRedPlayer = true
     else
       var isRedPlayer = false
-    return getTilesWherePiecesDontHaveFullEnergy(getTilesWithAFriendlyPieceOrAFriendlyFlatPiece(isRedPlayer, game.getAllTilesInListForm()))
+    return utils.getTilesWherePiecesDontHaveFullEnergy(utils.getTilesWithAFriendlyPieceOrAFriendlyFlatPiece(isRedPlayer, game.getAllTilesInListForm()))
   }
 
   cast(game, targetPiece)
@@ -91,7 +86,7 @@ class Empower extends Spell
       var isRedPlayer = true
     else
       var isRedPlayer = false
-    return getTilesWithMoreThanZeroStrength(getTilesWithAFriendlyPieceOrAFriendlyFlatPiece(isRedPlayer, getTilesInRangeOfAFriendlyActiveCaster(game, this.owner)))
+    return utils.getTilesWithMoreThanZeroStrength(utils.getTilesWithAFriendlyPieceOrAFriendlyFlatPiece(isRedPlayer, utils.getTilesInRangeOfAFriendlyActiveCaster(game, this.owner)))
   }
 
   cast(game, targetPiece)
@@ -117,7 +112,7 @@ class Accelerate extends Spell
       var isRedPlayer = true
     else
       var isRedPlayer = false
-    return getTilesWithPiecesWithMovementCapacityHigherThanZero(getTilesWithAFriendlyPieceOrAFriendlyFlatPiece(isRedPlayer, getTilesInRangeOfAFriendlyActiveCaster(game, this.owner)))
+    return utils.getTilesWithPiecesWithMovementCapacityHigherThanZero(utils.getTilesWithAFriendlyPieceOrAFriendlyFlatPiece(isRedPlayer, utils.getTilesInRangeOfAFriendlyActiveCaster(game, this.owner)))
   }
 
   cast(game, targetPiece)
@@ -143,7 +138,7 @@ class QuickFoot extends Spell
       var isRedPlayer = true
     else
       var isRedPlayer = false
-    return getTilesWithPiecesWithMovementCapacityHigherThanZero(getTilesWithAFriendlyPieceOrAFriendlyFlatPiece(isRedPlayer, getTilesInRangeOfAFriendlyActiveCaster(game, this.owner)))
+    return utils.getTilesWithPiecesWithMovementCapacityHigherThanZero(utils.getTilesWithAFriendlyPieceOrAFriendlyFlatPiece(isRedPlayer, utils.getTilesInRangeOfAFriendlyActiveCaster(game, this.owner)))
   }
 
   cast(game, targetPiece)
@@ -165,7 +160,7 @@ class LittleMissle extends Spell
 
   getTilesWhichCanBeCastOn(game)
   {
-    return getTilesWithAPieceOrAFlatPiece(getTilesInRangeOfAFriendlyActiveCaster(game, this.owner))
+    return utils.getTilesWithAPieceOrAFlatPiece(utils.getTilesInRangeOfAFriendlyActiveCaster(game, this.owner))
   }
 
   cast(game, targetPiece)
@@ -188,7 +183,7 @@ class Detonate extends Spell
   getTilesWhichCanBeCastOn(game)
   {
     var isRedPlayer = this.owner == "Red" ? true : false 
-    return getTilesWithAFriendlyPieceOrAFriendlyFlatPiece(isRedPlayer, getTilesInRangeOfAFriendlyActiveCaster(game, this.owner))
+    return utils.getTilesWithAFriendlyPieceOrAFriendlyFlatPiece(isRedPlayer, utils.getTilesInRangeOfAFriendlyActiveCaster(game, this.owner))
   }
 
   cast(game, targetPiece)
@@ -255,14 +250,14 @@ class Piece
   canReceiveFreeEnergy(game)
   {
     var pieceTile = this.getCurrentTile(game)
-    return tileIsInRangeOfFriendlyConduit(game, this.owner, pieceTile)
+    return utils.tileIsInRangeOfFriendlyConduit(game, this.owner, pieceTile)
   }
 
   getAttackableTiles(game)
   {
     var pieceTile = this.getCurrentTile(game)
-    var attackableTiles = getTilesWithAPieceOrAFlatPieceOrNonPlatformFlatPiece(getTilesWithinRangeOfTile(game.getAllTilesInListForm(), pieceTile, this.attackRange))
-    attackableTiles = removeValueFromArray(attackableTiles, pieceTile) 
+    var attackableTiles = utils.getTilesWithAPieceOrAFlatPieceOrNonPlatformFlatPiece(utils.getTilesWithinRangeOfTile(game.getAllTilesInListForm(), pieceTile, this.attackRange))
+    attackableTiles = utils.removeValueFromArray(attackableTiles, pieceTile) 
     return attackableTiles
   }
 
@@ -280,13 +275,13 @@ class Piece
     {
       if (followIndex == -1)
       {
-        movePieceFromOneTileToAnother(initialTile, path[leadIndex])
+        utils.movePieceFromOneTileToAnother(initialTile, path[leadIndex])
         var movedFromTile = initialTile
         this.movement --;
       }
       else
       {
-        movePieceFromOneTileToAnother(path[followIndex], path[leadIndex])
+        utils.movePieceFromOneTileToAnother(path[followIndex], path[leadIndex])
         var movedFromTile = path[followIndex]
         this.movement --;
       }
@@ -317,13 +312,13 @@ class Piece
     {
       if (followIndex == -1)
       {
-        movePieceFromOneTileToAnother(initialTile, path[leadIndex])
+        utils.movePieceFromOneTileToAnother(initialTile, path[leadIndex])
         var movedFromTile = initialTile
       }
 
       else
       {
-        movePieceFromOneTileToAnother(path[followIndex], path[leadIndex])
+        utils.movePieceFromOneTileToAnother(path[followIndex], path[leadIndex])
         var movedFromTile = path[followIndex]
       }
 
@@ -344,20 +339,20 @@ class Piece
 
   getTilesWhichCanBeMovedToAndThePathThere(game)
   {
-    return getTilesInMoveRangeAndThePathThere(game.board, this.getCurrentTile(game))
+    return utils.getTilesInMoveRangeAndThePathThere(game.board, this.getCurrentTile(game))
   }
 
   getTilesWhichCanBeBuiltOn(game)
   {
     var buildableTiles = []
     if (this.owner == 'Red')
-      var tilesNextToFriendlyBuilders = getTilesNextToFriendlyActiveBuilders(game, true)
+      var tilesNextToFriendlyBuilders = utils.getTilesNextToFriendlyActiveBuilders(game, true)
     else
-      var tilesNextToFriendlyBuilders = getTilesNextToFriendlyActiveBuilders(game, false)
+      var tilesNextToFriendlyBuilders = utils.getTilesNextToFriendlyActiveBuilders(game, false)
     if(this.isFlat)
-      return getTilesWithoutAFlatPieceAndWithoutAPiece((tilesNextToFriendlyBuilders))
+      return utils.getTilesWithoutAFlatPieceAndWithoutAPiece((tilesNextToFriendlyBuilders))
     else
-      return getTilesWithoutAPiece((tilesNextToFriendlyBuilders))
+      return utils.getTilesWithoutAPiece((tilesNextToFriendlyBuilders))
   }
 
   increaseHealth(amount)
@@ -422,7 +417,7 @@ class Piece
   {
     var attackerTile = attacker.getCurrentTile(game)
     var victimTile = this.getCurrentTile(game)
-    if (getDistanceBetweenTwoTiles(attackerTile, victimTile) <= this.attackRange && this.isActive && this.health >= 0)
+    if (utils.getDistanceBetweenTwoTiles(attackerTile, victimTile) <= this.attackRange && this.isActive && this.health >= 0)
       attacker.takeDamage(game, this, this.strength)
   }
 
@@ -439,7 +434,7 @@ class Piece
 
     if ("addReactionsWhenBuilt" in this)
       for (var [reactionTile, reactionsList] of game.reactions) 
-        removeValueFromArray(reactionsList, this)
+        utils.removeValueFromArray(reactionsList, this)
 
     if(this.owner == "Red")
       game.redPlayer.activeEnergy -= this.energy
@@ -509,7 +504,7 @@ class BoostPad extends Piece
 
       var path = []
       var spacesToMove = 3
-      while (spacesToMove > 0 && piecesCurrentTile.col + direction.colDelta >= 0 && piecesCurrentTile.col + direction.colDelta < boardWidth && piecesCurrentTile.row + direction.rowDelta >= 0 && piecesCurrentTile.row + direction.rowDelta < boardLength)
+      while (spacesToMove > 0 && piecesCurrentTile.col + direction.colDelta >= 0 && piecesCurrentTile.col + direction.colDelta < constants.boardWidth && piecesCurrentTile.row + direction.rowDelta >= 0 && piecesCurrentTile.row + direction.rowDelta < constants.boardLength)
       {
         var tileToAddToPath = game.board[piecesCurrentTile.col + direction.colDelta][piecesCurrentTile.row + direction.rowDelta]
         if (tileToAddToPath.piece != null)
@@ -632,8 +627,8 @@ class Archer extends Piece
   getAttackableTiles(game)
   {
     var pieceTile = this.getCurrentTile(game)
-    var attackableTiles = getTilesWithAPieceOrAFlatPiece(getAttackableTilesThatDontGoThroughAnotherUnit(game.board, pieceTile))
-    attackableTiles = removeValueFromArray(attackableTiles, pieceTile) 
+    var attackableTiles = utils.getTilesWithAPieceOrAFlatPiece(utils.getAttackableTilesThatDontGoThroughAnotherUnit(game.board, pieceTile))
+    attackableTiles = utils.removeValueFromArray(attackableTiles, pieceTile) 
     return attackableTiles
   }
 }
@@ -654,7 +649,7 @@ class PhaserBoy extends Piece
   getAttackableTiles(game)
   {
     var pieceTile = this.getCurrentTile(game)
-    var attackableTiles = getTilesWithFirstPieceWithinEachCardinalDirectionFromCenterTileWithinRange(game.board, pieceTile, this.attackRange)
+    var attackableTiles = utils.getTilesWithFirstPieceWithinEachCardinalDirectionFromCenterTileWithinRange(game.board, pieceTile, this.attackRange)
     return attackableTiles
   }
 
@@ -712,7 +707,7 @@ class Sniper extends Piece
   getAttackableTiles(game)
   {
     var pieceTile = this.getCurrentTile(game)
-    var attackableTiles = getTilesWithFirstPieceWithinEachCardinalDirectionFromCenterTileWithinRange(game.board, pieceTile, this.attackRange)
+    var attackableTiles = utils.getTilesWithFirstPieceWithinEachCardinalDirectionFromCenterTileWithinRange(game.board, pieceTile, this.attackRange)
     return attackableTiles
   }
 }
@@ -772,19 +767,19 @@ class PowerPriest extends Piece
   {
     var pieceTile = this.getCurrentTile(game)
     var isRedPlayer = this.owner == "Red" ? true : false 
-    return getTilesWithAFriendlyPieceOrAFriendlyFlatPiece(isRedPlayer, getAdjacentTiles(game.board, pieceTile))
+    return utils.getTilesWithAFriendlyPieceOrAFriendlyFlatPiece(isRedPlayer, getAdjacentTiles(game.board, pieceTile))
   }
 
   activate(game)
   {
     this.isActive = true
-    updatePiecesWhichCanReceiveFreeEnergy(game)
+    utils.updatePiecesWhichCanReceiveFreeEnergy(game)
   }
 
   deactivate(game)
   {
     this.isActive = false
-    updatePiecesWhichCanReceiveFreeEnergy(game)
+    utils.updatePiecesWhichCanReceiveFreeEnergy(game)
   }
 
   castSpell(game, targetPiece)
@@ -812,7 +807,7 @@ class ElectricWizard extends Piece
   getTilesThatUnitSpellCanBeCastOn(game)
   {
     var pieceTile = this.getCurrentTile(game)
-    return getTilesWithAPieceOrAFlatPiece(getTilesWithinRangeOfTile(game.getAllTilesInListForm(), pieceTile, 2))
+    return utils.getTilesWithAPieceOrAFlatPiece(utils.getTilesWithinRangeOfTile(game.getAllTilesInListForm(), pieceTile, 2))
   }
 
   castSpell(game, targetPiece)
@@ -838,7 +833,7 @@ class Blaster extends Piece
   getTilesThatUnitSpellCanBeCastOn(game)
   {
     var pieceTile = this.getCurrentTile(game)
-    return getTilesWithUnits(getTilesWithFirstPieceWithinEachCardinalDirectionFromCenterTileWithinRange(game.board, pieceTile, 2))
+    return utils.getTilesWithUnits(utils.getTilesWithFirstPieceWithinEachCardinalDirectionFromCenterTileWithinRange(game.board, pieceTile, 2))
   }
 
   castSpell(game, targetPiece)
@@ -865,7 +860,7 @@ class Blaster extends Piece
 
     while (spacesToMove > 0)
     {
-      if (targetsCurrentTile.col + direction.colDelta < 0 || targetsCurrentTile.col + direction.colDelta > boardWidth || targetsCurrentTile.row + direction.rowDelta < 0 || targetsCurrentTile.row + direction.rowDelta > boardLength)
+      if (targetsCurrentTile.col + direction.colDelta < 0 || targetsCurrentTile.col + direction.colDelta > constants.boardWidth || targetsCurrentTile.row + direction.rowDelta < 0 || targetsCurrentTile.row + direction.rowDelta > constants.boardLength)
       {
         targetPiece.moveWithoutExpendingMovement(game, path)
         targetPiece.takeDamage(game, this, 1)
@@ -908,7 +903,7 @@ class Witch extends Piece
   getTilesThatUnitSpellCanBeCastOn(game)
   {
     var pieceTile = this.getCurrentTile(game)    
-    return getTilesWithoutAFlatPieceAndWithoutAPiece(getTilesWithinRangeOfTile(game.getAllTilesInListForm(), pieceTile, 2))
+    return utils.getTilesWithoutAFlatPieceAndWithoutAPiece(utils.getTilesWithinRangeOfTile(game.getAllTilesInListForm(), pieceTile, 2))
   }
 
   castSpell(game, targetTile)
@@ -960,13 +955,13 @@ class EnergyTower extends Piece
   activate(game)
   {
     this.isActive = true
-    updatePiecesWhichCanReceiveFreeEnergy(game)
+    utils.updatePiecesWhichCanReceiveFreeEnergy(game)
   }
 
   deactivate(game)
   {
     this.isActive = false
-    updatePiecesWhichCanReceiveFreeEnergy(game)
+    utils.updatePiecesWhichCanReceiveFreeEnergy(game)
   }
 }
 
@@ -989,7 +984,7 @@ class PulseStick extends Piece
       var pieceTile = this.getCurrentTile(game)
       for (var tile of game.getAllTilesInListForm())
       {
-        if (getDistanceBetweenTwoTiles(pieceTile, tile) <= 2)
+        if (utils.getDistanceBetweenTwoTiles(pieceTile, tile) <= 2)
         {
           if (tile.piece != null)
             tile.piece.increaseEnergy(game)
@@ -1034,7 +1029,7 @@ class Hopper extends Piece
   getTilesWhichCanBeMovedToAndThePathThere(game)
   {
     var pieceTile = this.getCurrentTile(game)        
-    return getTilesInHopRangeAndThePathThere(game.board, pieceTile)
+    return utils.getTilesInHopRangeAndThePathThere(game.board, pieceTile)
   }
 
   move(game, path)
@@ -1048,14 +1043,14 @@ class Hopper extends Piece
     {
       if (followIndex == -1)
       {
-        movePieceFromOneTileToAnother(initialTile, path[leadIndex])
+        utils.movePieceFromOneTileToAnother(initialTile, path[leadIndex])
         this.movement = this.movement - 2;
         var movedFromTile = initialTile 
         movedOverTile = getTileBetweenTwoTilesTwoSpacesApartInLine(game.board, initialTile, path[leadIndex])
       }
       else
       {
-        movePieceFromOneTileToAnother(path[followIndex], path[leadIndex])
+        utils.movePieceFromOneTileToAnother(path[followIndex], path[leadIndex])
         this.movement = this.movement - 2;
         var movedFromTile = path[followIndex]
         movedOverTile = getTileBetweenTwoTilesTwoSpacesApartInLine(game.board, path[followIndex], path[leadIndex])
@@ -1174,7 +1169,7 @@ class Techies extends Piece
     else
       victimTile.piece = null
 
-    for (var tile of getTilesWithAPieceOrAFlatPiece(getTilesWithinRangeOfTile(game.getAllTilesInListForm(), victimTile, 2)))
+    for (var tile of utils.getTilesWithAPieceOrAFlatPiece(utils.getTilesWithinRangeOfTile(game.getAllTilesInListForm(), victimTile, 2)))
       if (tile.piece != null)
         tile.piece.takeDamage(game, null, 5)
       if (tile.flatPiece != null)
@@ -1196,13 +1191,13 @@ class MagicPowerTower extends Piece
   activate(game)
   {
     this.isActive = true
-    updatePiecesWhichCanReceiveFreeEnergy(game)
+    utils.updatePiecesWhichCanReceiveFreeEnergy(game)
   }
 
   deactivate(game)
   {
     this.isActive = false
-    updatePiecesWhichCanReceiveFreeEnergy(game)
+    utils.updatePiecesWhichCanReceiveFreeEnergy(game)
   }
 }
 
@@ -1224,7 +1219,7 @@ class PowerHut extends Piece
     if (this.owner == "Red")
       var distanceFromBackWall = pieceTile.row + 1
     else
-      var distanceFromBackWall = boardLength - pieceTile.row
+      var distanceFromBackWall = constants.boardLength - pieceTile.row
       
     if (distanceFromBackWall <= 3)
       this.energyCapacityProduction = 1
@@ -1259,7 +1254,7 @@ class GoldHut extends Piece
     if (this.owner == "Red")
       var distanceFromBackWall = pieceTile.row + 1
     else
-      var distanceFromBackWall = boardLength - pieceTile.row
+      var distanceFromBackWall = constants.boardLength - pieceTile.row
       
     if (distanceFromBackWall <= 3)
       this.goldProduction = 1
@@ -1508,436 +1503,3 @@ module.exports.nonBaseSet = nonBaseSet
 module.exports.nonBaseSetUnits = nonBaseSetUnits
 module.exports.nonBaseSetBuildings = nonBaseSetBuildings
 module.exports.nonBaseSetSpells = nonBaseSetSpells
-
-/////////utilities//////////
-function updatePiecesWhichCanReceiveFreeEnergy(game)
-{
-  for (var tile of game.getAllTilesInListForm())
-  {
-    if(tile.piece != null)
-      tile.piece.canReceiveFreeEnergyAtThisLocation = tile.piece.canReceiveFreeEnergy(game)          
-    if(tile.flatPiece != null)
-      tile.flatPiece.canReceiveFreeEnergyAtThisLocation = tile.flatPiece.canReceiveFreeEnergy(game)                    
-  }
-}
-
-function tileIsInRangeOfFriendlyConduit(game, playerColor, tile)
-{
-  for (var possibleConduitTile of game.getAllTilesInListForm())
-  {
-    var piece = possibleConduitTile.piece
-    var flatPiece = possibleConduitTile.flatPiece
-    if(piece != null && piece.types.includes("Conduit") && piece.owner == playerColor && getDistanceBetweenTwoTiles(possibleConduitTile, tile) <= piece.energyDistributionRange && piece.isActive)
-      return true
-    if(flatPiece != null && flatPiece.types.includes("Conduit") && flatPiece.owner == playerColor && getDistanceBetweenTwoTiles(possibleConduitTile, tile) <= flatPiece.energyDistributionRange && flatPiece.isActive)
-      return true
-  }
-  return false
-}
-
-function getTilesInRangeOfAFriendlyActiveCaster(game, playerColor)
-{
-  var newTiles = []
-  var casterTiles = getTilesWithFriendlyActiveCasters(game.getAllTilesInListForm(), playerColor)
-  for (var casterTile of casterTiles)
-  {
-    for (tile of getTilesWithinRangeOfTile(game.getAllTilesInListForm(), casterTile, casterTile.piece.castingRange))
-      newTiles.push(tile)
-  }
-  return newTiles
-}
-
-function getTilesWithMoreThanZeroStrength(tiles)
-{
-  var newTiles = []
-  for (var tile of tiles)
-  {
-    if (tile.piece != null && tile.strength > 0)
-      newTiles.push(tile)
-  }
-  return newTiles  
-}
-
-function getTilesWithUnits(tiles)
-{
-  var newTiles = []
-  for (var tile of tiles)
-  {
-    if (tile.piece != null && tile.piece.types.includes("Unit"))
-      newTiles.push(tile)
-  }
-  return newTiles
-}
-
-function getTilesWithFriendlyActiveCasters(tiles, playerColor)
-{
-  var newTiles = []
-  for (var tile of tiles)
-  {
-    if (tile.piece != null && tile.piece.types.includes("Caster") && tile.piece.owner == playerColor && tile.piece.isActive)
-    {
-      newTiles.push(tile)
-    }
-  }
-  return newTiles
-}
-
-function getTilesThatShareAColumnOrRowWithCenterTile(tiles, centerTile)
-{
-  var newTiles = []
-  for (var tile of tiles)
-    if (tile.col == centerTile.col || tile.row == centerTile.row)
-      newTiles.push(tile)
-  return newTiles
-}
-
-//used to get the tile a hopper just hopped over
-function getTileBetweenTwoTilesTwoSpacesApartInLine(board, tile1, tile2)
-{
-  if (tile1.row == tile2.row)
-    return board[(tile1.col + tile2.col)/2][tile1.row]
-  else
-    return board[tile1.col][(tile1.row + tile2.row)/2]
-}
-
-function getTilesWithFirstPieceWithinEachCardinalDirectionFromCenterTileWithinRange(board, centerTile, range)
-{
-  var newTiles = []
-  var north = {colDelta: 0, rowDelta: -1}
-  var south = {colDelta: 0, rowDelta: 1}
-  var east = {colDelta: 1, rowDelta: 0}
-  var west = {colDelta: -1, rowDelta: 0}
-
-  var directions = []
-  directions.push(north)
-  directions.push(south)
-  directions.push(east)
-  directions.push(west)
-
-  for (var direction of directions)
-  {
-    newTiles = newTiles.concat(findFirstPieceInDirectionFromCenterTileAddingFlatPiecesWithinRange(board, centerTile, direction, range))
-  }
-  return newTiles
-}
-
-function findFirstPieceInDirectionFromCenterTileAddingFlatPiecesWithinRange(board, centerTile, direction, range)
-{
-  var newTiles = []
-  var currentCol = centerTile.col + direction.colDelta
-  var currentRow =  centerTile.row + direction.rowDelta
-  var tilesTraveled = 1
-  while (currentCol < boardWidth && currentRow < boardLength && currentCol >= 0 && currentRow >= 0 && tilesTraveled <= range)
-  {
-    var currentTile = board[currentCol][currentRow]
-    if (currentTile.piece != null)
-    {
-      newTiles.push(currentTile)
-      return newTiles
-    }
-
-    if (currentTile.flatPiece != null)
-      newTiles.push(currentTile)
-
-    currentCol = currentCol + direction.colDelta
-    currentRow = currentRow + direction.rowDelta
-    tilesTraveled ++
-  }
-  return newTiles
-}
-
-function getAttackableTilesThatDontGoThroughAnotherUnit(board, fromTile)
-{
-  var tilesThatCanBeAttacked = []
-  getAttackableTilesThatDontGoThroughAnotherUnitHelper(board, fromTile, fromTile.piece.attackRange, tilesThatCanBeAttacked)
-  return tilesThatCanBeAttacked
-}
-
-function getAttackableTilesThatDontGoThroughAnotherUnitHelper(board, tile, attackRangeRemaining, tilesThatCanBeAttacked)
-{
-  if (attackRangeRemaining == 0)
-    return
-
-  var adjacentTiles = getAdjacentTiles(board, tile)
-  for (adjacentTile of adjacentTiles)
-  {
-    if (adjacentTile.piece != null)
-      tilesThatCanBeAttacked.push(adjacentTile)
-    else
-      getAttackableTilesThatDontGoThroughAnotherUnitHelper(board, adjacentTile, attackRangeRemaining-1, tilesThatCanBeAttacked)
-  }
-}
-
-function getTilesInHopRangeAndThePathThere(board, fromTile)
-{
-  var tilesThatCanBeHoppedToAndThePathThere = new Map()
-  var currentPath = []
-  if (fromTile.piece.movement % 2 != 0)
-  {
-    var adjustedMovement = fromTile.piece.movement - 1
-    if (adjustedMovement < 0)
-      adjustedMovement = 0
-  }
-  else
-    adjustedMovement = fromTile.piece.movement
-
-  getTilesInHopRangeAndThePathThereHelper(board, fromTile, adjustedMovement, tilesThatCanBeHoppedToAndThePathThere, currentPath)
-  return tilesThatCanBeHoppedToAndThePathThere
-}
-
-function getTilesInHopRangeAndThePathThereHelper(board, tile, movementLeft, tilesThatCanBeHoppedToAndThePathThere, currentPath)
-{
-  if (movementLeft <= 0)
-    return
-
-  var hopTiles = getTilesTwoAwayFromTileInLine(board, tile)
-  for (hopTile of hopTiles)
-  {
-    if (hopTile.piece == null)
-    {
-      var newPath = _.cloneDeep(currentPath)
-      newPath.push(hopTile)
-
-      if (tilesThatCanBeHoppedToAndThePathThere.has(hopTile))
-      {
-        if (newPath.length < tilesThatCanBeHoppedToAndThePathThere.get(hopTile).length)
-        {
-          tilesThatCanBeHoppedToAndThePathThere.set(hopTile, newPath)
-        }
-      }
-      else
-      {
-        tilesThatCanBeHoppedToAndThePathThere.set(hopTile, newPath) 
-      } 
-      getTilesInHopRangeAndThePathThereHelper(board, hopTile, movementLeft-2, tilesThatCanBeHoppedToAndThePathThere, newPath)
-    }
-  }
-}
-
-function getTilesTwoAwayFromTileInLine(board, tile)
-{
-  var tilesTwoAwayFromTileInLine = []
-  if (tile.row - 2 >= 0)
-    tilesTwoAwayFromTileInLine.push(board[tile.col][tile.row-2])
-  if (tile.row + 2 < boardLength)
-    tilesTwoAwayFromTileInLine.push(board[tile.col][tile.row+2])
-  if (tile.col - 2 >= 0)
-    tilesTwoAwayFromTileInLine.push(board[tile.col-2][tile.row])
-  if (tile.col + 2 < boardWidth)
-    tilesTwoAwayFromTileInLine.push(board[tile.col+2][tile.row])
-  return tilesTwoAwayFromTileInLine  
-}
-
-
-function getTilesInMoveRangeAndThePathThere(board, fromTile)
-{
-  var tilesThatCanBeMovedToAndThePathThere = new Map()
-  var currentPath = []
-  getTilesInMoveRangeAndThePathThereHelper(board, fromTile, fromTile.piece.movement, tilesThatCanBeMovedToAndThePathThere, currentPath)
-  return tilesThatCanBeMovedToAndThePathThere
-}
-
-function getTilesInMoveRangeAndThePathThereHelper(board, tile, movementLeft, tilesThatCanBeMovedToAndThePathThere, currentPath)
-{
-  if (movementLeft == 0)
-    return
-
-  var adjacentTiles = getAdjacentTiles(board, tile)
-  for (adjacentTile of adjacentTiles)
-  {
-    if (adjacentTile.piece == null)
-    {
-      var newPath = _.cloneDeep(currentPath)
-      newPath.push(adjacentTile)
-
-      if (tilesThatCanBeMovedToAndThePathThere.has(adjacentTile))
-      {
-        if (newPath.length < tilesThatCanBeMovedToAndThePathThere.get(adjacentTile).length)
-        {
-          tilesThatCanBeMovedToAndThePathThere.set(adjacentTile, newPath)
-        }
-      }
-      else
-      {
-        tilesThatCanBeMovedToAndThePathThere.set(adjacentTile, newPath)
-      }
-      getTilesInMoveRangeAndThePathThereHelper(board, adjacentTile, movementLeft-1, tilesThatCanBeMovedToAndThePathThere, newPath)
-    }
-  }
-}
-
-function movePieceFromOneTileToAnother(fromTile, toTile)
-{
-  toTile.piece = fromTile.piece
-  toTile.piece.currentCol = toTile.col
-  toTile.piece.currentRow = toTile.row
-  fromTile.piece = null
-}
-
-function playerOwnsPiece(isRedPlayer, piece)
-{
-  return (isRedPlayer && piece.owner == "Red") || (!isRedPlayer && piece.owner == "Blue")
-}
-
-function getTilesNextToFriendlyActiveBuilders(game, isRedPlayer)
-{
-  var friendlyBuilderLocations = getTilesWithActiveFriendlyBuilders(game.getAllTilesInListForm(), isRedPlayer)
-  var newTiles = []
-  for (tile of friendlyBuilderLocations)
-  {
-    newTiles = newTiles.concat(getAdjacentTiles(game.board, tile))
-  }
-  return newTiles
-}
-
-function getTilesWithPiecesWithMovementCapacityHigherThanZero(tiles)
-{
-  var newTiles = []
-  for (tile of tiles)
-    if(tile.piece.movementCapacity > 0)
-      newTiles.push(tile)
-  return newTiles
-}
-
-function getTilesWithAPieceOrAFlatPieceOrNonPlatformFlatPiece(tiles)
-{
-  var newTiles = []
-  for (tile of tiles)
-    if(isAttackableTile(tile))
-      newTiles.push(tile)
-  return newTiles
-}
-
-function isAttackableTile(tile)
-{
-  return (tile.piece != null || (tile.flatPiece != null && !tile.flatPiece.types.includes("Platform")))
-}
-
-function getTilesWithActiveFriendlyBuilders(tiles, isRedPlayer)
-{
-  var newTiles = []
-  for (tile of tiles)
-    if (tile.piece != null && tile.piece.types.includes("Builder") && playerOwnsPiece(isRedPlayer, tile.piece) && tile.piece.isActive)
-      newTiles.push(tile)
-  return newTiles
-}
-
-function getTilesWherePiecesDontHaveFullEnergy(tiles)
-{
-  var newTiles = []
-  for (tile of tiles)
-    if ((tile.piece != null && tile.piece.energy < tile.piece.energyCapacity) || (tile.flatPiece != null && tile.flatPiece.energy < tile.flatPiece.energyCapacity))
-      newTiles.push(tile)
-  return newTiles   
-}
-
-
-function getTilesWithoutAFlatPieceAndWithoutAPiece(tiles)
-{
-  var newTiles = []
-  for (tile of tiles)
-    if (tile.piece == null && tile.flatPiece == null)
-      newTiles.push(tile)
-  return newTiles 
-}
-
-function getTilesWithAPieceOrAFlatPiece(tiles)
-{
-  var newTiles = []
-  for (tile of tiles)
-    if (tile.piece != null || tile.flatPiece != null)
-      newTiles.push(tile)
-  return newTiles   
-}
-
-function getTilesWithinRangeOfTile(tiles, centerTile, range)
-{
-  var newTiles = []
-  for (tile of tiles)
-    if (getDistanceBetweenTwoTiles(tile, centerTile) <= range && getDistanceBetweenTwoTiles(tile, centerTile) != 0)
-      newTiles.push(tile)
-  return newTiles
-}
-
-function getDistanceBetweenTwoTiles(tile1, tile2)
-{
-  return Math.abs(tile1.col - tile2.col) + Math.abs(tile1.row-tile2.row)
-}
-
-function getTilesWithoutAPiece(tiles)
-{
-  var newTiles = []
-  for (tile of tiles)
-    if (tile.piece == null)
-      newTiles.push(tile)
-  return newTiles 
-}
-
-function getTilesWithAFriendlyPieceOrAFriendlyFlatPiece(isRedPlayer, tiles)
-{
-  if (isRedPlayer)
-    var friendlyOwner = 'Red'
-  else
-    var friendlyOwner = 'Blue'
-
-  var newTiles = []
-  for (tile of tiles)
-    if (tile.piece != null && tile.piece.owner == friendlyOwner)
-        newTiles.push(tile)
-    else if (tile.flatPiece != null && tile.flatPiece.owner == friendlyOwner)
-        newTiles.push(tile)
-  return newTiles
-} 
-
-function getTilesWithAnEnemyPiece(isRedPlayer, tiles)
-{
-  if (isRedPlayer)
-    var enemyOwner = 'Blue'
-  else
-    var enemyOwner = 'Red'
-
-  var newTiles = []
-  for (tile of tiles)
-    if (tile.piece != null && tile.piece.owner == enemyOwner)
-        newTiles.push(tile)
-  return newTiles
-}
-
-function getTilesWithStatus(tiles, status)
-{
-  var newTiles = []
-  for (tile of tiles)
-    if (tile.status == status)
-      newTiles.push(tile)
-  return newTiles 
-}
-
-function getAdjacentTiles(board, tile)
-{
-  var adjacentTiles = []
-  if (tile.row - 1 >= 0)
-    adjacentTiles.push(board[tile.col][tile.row-1])
-  if (tile.row + 1 < boardLength)
-    adjacentTiles.push(board[tile.col][tile.row+1])
-  if (tile.col - 1 >= 0)
-    adjacentTiles.push(board[tile.col-1][tile.row])
-  if (tile.col + 1 < boardWidth)
-    adjacentTiles.push(board[tile.col+1][tile.row])
-  return adjacentTiles
-}
-
-function onlyUnique(value, index, self) { 
-    return self.indexOf(value) === index;
-}
-
-function removeValueFromArray(arr) 
-{
-  var what, a = arguments, L = a.length, ax;
-  while (L > 1 && arr.length) 
-  {
-    what = a[--L];
-    while ((ax = arr.indexOf(what)) !== -1)
-        arr.splice(ax, 1);
-  }
-  return arr;
-}
