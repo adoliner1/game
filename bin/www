@@ -3,8 +3,8 @@
 /**
  * Module dependencies.
  */
-
 var app = require('../app');
+var constants = require('../public/javascripts/game/constants.js');
 var debug = require('debug')('pugpractice:server');
 var http = require('http');
 var pieces = require('../public/javascripts/game/pieces.js')
@@ -13,44 +13,38 @@ var _ = require('lodash');
 /**
  * Get port from environment and store in Express.
  */
-
 var port = normalizePort(process.env.PORT || '8080');
 app.set('port', port);
 
 /**
  * Create HTTP server.
  */
-
 var server = http.createServer(app);
 var io = require('socket.io')(server);
-  
-//globals
-var userNickNames = {};
-var typingUsers = [];
-var lobbyGameList = {}
-var gameList = {}
-
-
-const boardLength = 15;
-const boardWidth = 9;
-const startOfRedTiles = 0
-const endOfRedTiles = 3
-const startOfBlueTiles = 12
-const endOfBlueTiles = 15
+var lobby = require('../bin/lobby')
+lobby.activateSocket(io)
 
 io.on('connection', function(socket)
 {
-  io.emit('chat message', "A new user connected");
-  io.emit('online users update', userNickNames)
-
-  for (host in lobbyGameList)
+  socket.on('new socket connected to game', function(name)
   {
-    if (lobbyGameList.hasOwnProperty(host))
+    for (host in lobby.gameList)
     {
-      game = lobbyGameList[host]
-      io.to(socket.id).emit('game made', game)
+      console.log(lobby.gameList)
+      if (lobby.gameList.hasOwnProperty(host) && (lobby.gameList[host].redPlayer.Name == name))
+      {
+        lobby.gameList[host].redPlayer.socketID = socket.id
+        socket.join(host)
+        io.to(socket.id).emit('new game data', convertServerGameToClientGame(lobby.gameList[host]))
+      }
+      else if (lobby.gameList.hasOwnProperty(host) && (lobby.gameList[host].bluePlayer.Name == name))
+      {
+        lobby.gameList[host].bluePlayer.socketID = socket.id
+        socket.join(host)
+        io.to(socket.id).emit('new game data', convertServerGameToClientGame(lobby.gameList[host]))
+      }
     }
-  }
+  })
 
   socket.on('request to end action phase', function()
   {
@@ -79,25 +73,6 @@ io.on('connection', function(socket)
     game.phase = "Energize"
 
     io.to(game.host).emit('new game state', convertServerGameToClientGame(game)) 
-  })
-
-  socket.on('new socket connected to game', function(name)
-  {
-    for (host in gameList)
-    {
-      if (gameList.hasOwnProperty(host) && (gameList[host].redPlayer.Name == name))
-      {
-        gameList[host].redPlayer.socketID = socket.id
-        socket.join(host)
-        io.to(socket.id).emit('new game data', convertServerGameToClientGame(gameList[host]))
-      }
-      else if (gameList.hasOwnProperty(host) && (gameList[host].bluePlayer.Name == name))
-      {
-        gameList[host].bluePlayer.socketID = socket.id
-        socket.join(host)
-        io.to(socket.id).emit('new game data', convertServerGameToClientGame(gameList[host]))
-      }
-    }
   })
 
   socket.on('request to cast a spell', function(inventoryPosition, targetTile, targetID)
@@ -848,6 +823,8 @@ io.on('connection', function(socket)
     io.to(game.host).emit('new game state', convertServerGameToClientGame(game)) 
   })
 
+
+  //game utils
   function restoreMovementForPlayersPieces(game, isRedPlayer)
   {
     for (tile of game.getAllTilesInListForm())
@@ -947,204 +924,6 @@ io.on('connection', function(socket)
     }
     return totalEnergyCapacityProduction    
   }
-
-  //////////////////////////////////////////
-  //lobby functions
-  socket.on('user trying to join game in lobby', function(host)
-  {
-    name = userNickNames[socket.id]
-    if (name == undefined) 
-    {
-      io.to(socket.id).emit('chat message', 'Set nickname to join a game');
-    }
-
-    else if (name == host) 
-    {
-      io.to(socket.id).emit('chat message', 'Can\'t join your own game');
-    }
-
-    //make new game and start it
-    else
-    {
-      var board = new Array(boardWidth);
-      for (var col = 0; col < boardWidth; col++)
-      {
-        board[col] = new Array(boardLength);
-        for (var row = 0; row < boardLength; row++) 
-        {
-          var tile = {piece: null, flatPiece: null, statuses: [], row: row, col: col}
-          board[col][row] = tile
-        }
-      }
-
-      //set central square VP multiplier
-      board[4][7].statuses.push("Victory Point Tokens*3")
-
-      board[4][13].piece = _.cloneDeep(pieces.baseSet['Headquarters'])
-      board[4][13].piece.owner = "Blue"
-      board[4][13].piece.isActive = true
-      board[4][13].piece.currentCol = 4
-      board[4][13].piece.currentRow = 13
-      board[4][1].piece = _.cloneDeep(pieces.baseSet['Headquarters'])
-      board[4][1].piece.owner = "Red"
-      board[4][1].piece.isActive = true
-      board[4][1].piece.currentCol = 4
-      board[4][1].piece.currentRow = 1 
-
-      //add builders
-      var initialBuilderTiles = []
-      initialBuilderTiles.push(board[2][12])
-      initialBuilderTiles.push(board[6][12])
-      initialBuilderTiles.push(board[2][2])
-      initialBuilderTiles.push(board[6][2])
-
-      for (tile of initialBuilderTiles)
-      {
-        tile.piece = _.cloneDeep(pieces.baseSet['Builder Drone'])
-        tile.piece.isActive = true
-        tile.piece.movement = 2
-        tile.piece.energy = 1
-        tile.piece.currentCol = tile.col
-        tile.piece.currentRow = tile.row
-
-        if (tile.row == 12)
-          tile.piece.owner = "Blue"
-        else
-          tile.piece.owner = "Red"
-      }  
-
-      var nonHQBaseSet = _.cloneDeep(pieces.baseSet)
-      delete nonHQBaseSet['Headquarters']
-      var newGame =   
-      {
-        host: host,
-        redPlayer: {socketID: null, turnsTaken: 0, Name: name, goldProduction: 5, gold: 10, victoryPointTokenProduction: 0, victoryPoints: 0, activeEnergy: 2, energyCapacity: 6, inventory: Array(5)},
-        bluePlayer: {socketID: null, turnsTaken: 0, Name: host, goldProduction: 5, gold: 10, victoryPointTokenProduction: 0, victoryPoints: 0, activeEnergy: 2, energyCapacity: 6, inventory: Array(5)},
-        board: board,
-        reactions: new Map,
-        baseSet: nonHQBaseSet,
-        nonBaseSetBuildings: selectRandomNonBaseSet(pieces.nonBaseSetBuildings),
-        nonBaseSetUnits: selectRandomNonBaseSet(pieces.nonBaseSetUnits),
-        nonBaseSetSpells: selectRandomNonBaseSet(pieces.nonBaseSetSpells),
-        victoryPointTokenSupply: 100,
-        victoryPointTokenDrip: 1,
-        phase: "Action",
-        isRedPlayersTurn: true,
-
-        getRedFriendlyTiles: function()
-        {
-          var redTiles = []
-          for (var col = 0; col < boardWidth; col++)
-            for (var row = startOfRedTiles; row < endOfRedTiles; row++) 
-              redTiles.push(board[col][row])
-          return redTiles
-        },
-
-        getBlueFriendlyTiles: function()
-        {
-          var blueTiles = []
-          for (var col = 0; col < board.length; col++)
-            for (var row = startOfBlueTiles; row < endOfBlueTiles; row++) 
-              blueTiles.push(board[col][row])
-          return blueTiles
-        },
-
-        getAllTilesInListForm: function()
-        {
-          var allTiles = []
-          for (var col = 0; col < boardWidth; col++)
-            allTiles = allTiles.concat(board[col])
-          return allTiles
-        }
-      }
-
-      assignBonusesOfType(newGame, "G")
-      assignBonusesOfType(newGame, "V")
-      assignBonusesOfType(newGame, "E")
-      assignStartingBaseBonuses(newGame)
-      gameList[host] = newGame
-      socket.join(host)      
-      io.to(host).emit('trigger redirect for new game', host)
-    }
-  })
-
-  socket.on('make game in lobby', function(){
-    name = userNickNames[socket.id]
-    if (name == undefined)
-    {
-      io.to(socket.id).emit('chat message', 'Set nickname to make a game');
-    }
-    else if (name in lobbyGameList)
-    {
-      io.to(socket.id).emit('chat message', 'You already have a game');
-    }
-    else
-    {
-      var game = {host: name, redPlayer: name, bluePlayer: null}
-      lobbyGameList[name] = game
-      socket.join(game.host)
-      io.emit("game made", game)
-    }
-  })
-
-  //chat funcitons
-  socket.on('chat message', function(msg){
-    if (userNickNames[socket.id]) {
-      io.emit('chat message', userNickNames[socket.id] + ": " + msg);
-    }
-    else {
-      io.to(socket.id).emit('set nickname to start chatting');
-    }
-  })
-
-  socket.on('private message', function(data){
-    recipient = data.recip
-    message = data.msg
-    socketID = userNickNames.getKeyByValue(recipient)
-    if(socketID){
-      appendedMessage = "Private message to you from " + userNickNames[socket.id] + ": " + message
-      io.to(socketID).emit('chat message', appendedMessage);
-    }
-    else{
-      io.to(socket.id).emit('chat message', 'No such user');
-    }
-  })
-
-  socket.on('disconnect', function(){
-    if(userNickNames[socket.id]){
-      if(typingUsers.includes(userNickNames[socket.id])){
-        index = typingUsers.indexOf(name);
-        typingUsers.splice(index, 1);
-        io.emit('user stopped typing', typingUsers)
-      }
-    }
-    io.emit('chat message', "A user disconnected");
-    io.emit('online users update', userNickNames)
-  })
-
-  socket.on('new nickname', function(newNickName){
-    userNickNames[socket.id] = newNickName;
-    io.emit('online users update', userNickNames)
-  })
-
-  socket.on('user is typing', function(){
-    name = userNickNames[socket.id];
-    if(name){
-      if(!typingUsers.includes(name)){
-        typingUsers.push(name)
-        io.emit('user is typing', typingUsers)
-      }
-    }
-  })
-
-  socket.on('user stopped typing', function(){
-    name = userNickNames[socket.id];
-    if(typingUsers.includes(name)){
-        index = typingUsers.indexOf(name);
-        typingUsers.splice(index, 1);
-        io.emit('user stopped typing', typingUsers)
-      }
-  })
 })
 
 /**
@@ -1286,11 +1065,11 @@ function getRandomNumberBetweenMinAndMax(min, max)
 
 function convertServerBoardToClientBoard(board)
 {
-  var clientBoard = new Array(boardWidth)
-  for (var col = 0; col < boardWidth; col++)
+  var clientBoard = new Array(constants.boardWidth)
+  for (var col = 0; col < constants.boardWidth; col++)
   {
-    clientBoard[col] = new Array(boardLength);
-    for (var row = 0; row < boardLength; row++) 
+    clientBoard[col] = new Array(constants.boardLength);
+    for (var row = 0; row < constants.boardLength; row++) 
     {
       var gameTile = board[col][row]
       var clientTile = {piece: getPieceForClientFromGamePiece(gameTile.piece), flatPiece: getPieceForClientFromGamePiece(gameTile.flatPiece), statuses: gameTile.statuses, row: row, col: col}
@@ -1344,9 +1123,9 @@ function getDistanceBetweenTwoTiles(tile1, tile2)
 
 function findGameFromSocketID(socketID)
 {
-  for (host in gameList)
-    if (gameList.hasOwnProperty(host) && (gameList[host].redPlayer.socketID == socketID || gameList[host].bluePlayer.socketID == socketID))
-      return gameList[host]
+  for (host in lobby.gameList)
+    if (lobby.gameList.hasOwnProperty(host) && (lobby.gameList[host].redPlayer.socketID == socketID || lobby.gameList[host].bluePlayer.socketID == socketID))
+      return lobby.gameList[host]
   return null
 }
 
