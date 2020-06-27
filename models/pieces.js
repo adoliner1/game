@@ -47,6 +47,33 @@ var surge = new Surge
 nonBaseSet[surge.name] = surge.name
 nonBaseSetSpells[surge.name] = surge
 
+class InstantActivate extends Spell
+{
+    constructor()
+  {
+    super("Instant Activate", "activates a friendly piece if it has enough energy", ["Spell"], 5, "IA", "Piece")
+  }
+
+  getTilesWhichCanBeCastOn(game)
+  {
+    if (this.owner == "Red")
+      var isRedPlayer = true
+    else
+      var isRedPlayer = false
+    return utils.getTilesWithAFriendlyPieceOrAFriendlyFlatPiece(isRedPlayer, utils.getTilesInRangeOfAFriendlyActiveCaster(game, this.owner))
+  }
+
+  cast(game, targetPiece)
+  {
+    if (targetPiece.energy >= targetPiece.minimumEnergyNeededForActivation)
+      targetPiece.isActive = true
+  }
+}
+
+var instantActivate = new InstantActivate
+nonBaseSet[instantActivate.name] = instantActivate
+nonBaseSetSpells[instantActivate.name] = instantActivate
+
 class GlobalSurge extends Spell
 {
   constructor()
@@ -446,6 +473,91 @@ class Piece
       victimTile.piece = null
   }
 }
+
+//name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, health, attackRange, isFlat, canAttack)
+class Turret extends Piece
+{
+  constructor()
+  {
+    super("Turret", "unit spell: deal 1 damage to a piece within 2 tiles", "TU", ["Building"], 4, 1, 0, 0, 3, 0, false, false)    
+  }
+
+  getTilesThatUnitSpellCanBeCastOn(game)
+  {
+    var pieceTile = this.getCurrentTile(game)
+    return utils.getTilesWithAPieceOrAFlatPiece(utils.getTilesWithinRangeOfTile(game.getAllTilesInListForm(), pieceTile, 2))
+  }
+
+  castSpell(game, targetPiece)
+  {
+    targetPiece.takeDamage(game, this, 1)
+    this.deactivate(game)
+  }
+}
+
+var turret = new Turret
+nonBaseSet[turret.name] = turret
+nonBaseSetBuildings[turret.name] = turret
+
+//name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, health, attackRange, isFlat, canAttack)
+class RepairShop extends Piece
+{
+  constructor()
+  {
+    super("Repair Shop", "at the start of your turn, friendly pieces within 2 tiles of this get +1 health", "RS", ["Building"], 4, 1, 0, 0, 3, 0, false, false)    
+  }
+
+  performStartOfTurnEffects(game)
+  {
+    if (this.isActive)
+    {
+      var pieceTile = this.getCurrentTile(game)
+      var tilesWithPiecesInRange =  utils.getTilesWithAPieceOrAFlatPiece(utils.getTilesWithinRangeOfTile(game.getAllTilesInListForm(), pieceTile, 2))
+      for (tile of tilesWithPiecesInRange)
+      {
+        if (tile.piece != null && tile.piece.owner == this.owner)
+          tile.piece.increaseHealth(game)
+
+        if (tile.flatPiece != null && tile.flatPiece.owner == this.owner)
+          tile.flatPiece.increaseHealth(game)
+      }
+    }
+  }
+}
+
+var repairShop = new RepairShop
+nonBaseSet[repairShop.name] = repairShop
+nonBaseSetBuildings[repairShop.name] = repairShop
+
+//name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, health, attackRange, isFlat, canAttack)
+class FieldDrainer extends Piece
+{
+  constructor()
+  {
+    super("Field Drainer", "at the start of your turn, enemy pieces within 2 tiles of this lose 1 energy", "FD", ["Building"], 4, 1, 0, 0, 4, 0, false, false)    
+  }
+
+  performStartOfTurnEffects(game)
+  {
+    if (this.isActive)
+    {
+      var pieceTile = this.getCurrentTile(game)
+      var tilesWithPiecesInRange =  utils.getTilesWithAPieceOrAFlatPiece(utils.getTilesWithinRangeOfTile(game.getAllTilesInListForm(), pieceTile, 2))
+      for (tile of tilesWithPiecesInRange)
+      {
+        if (tile.piece != null && tile.piece.owner != this.owner)
+          tile.piece.reduceEnergy(game)
+
+        if (tile.flatPiece != null && tile.flatPiece.owner != this.owner)
+          tile.flatPiece.reduceEnergy(game)
+      }
+    }
+  }
+}
+
+var fieldDrainer = new FieldDrainer
+nonBaseSet[fieldDrainer.name] = fieldDrainer
+nonBaseSetBuildings[fieldDrainer.name] = fieldDrainer
 
 //name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, health, attackRange, isFlat, canAttack)
 class MovementPad extends Piece
@@ -934,7 +1046,7 @@ class Headquarters extends Piece
     this.energyCapacityProduction = 6
     this.goldProduction = 5
     this.energyDistributionRange = 4
-    this.castingRange = 5
+    this.castingRange = 4
   }
 }
 
