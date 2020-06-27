@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-var pieces = require('../public/javascripts/game/pieces.js')
-var constants = require('../public/javascripts/game/constants.js');
+var pieces = require('./pieces.js')
+var constants = require('../utilities/constants.js');
 var _ = require('lodash');
 
 function createNewGame(name, host)

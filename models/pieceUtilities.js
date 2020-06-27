@@ -1,4 +1,5 @@
-var constants = require('./constants');
+var constants = require('../utilities/constants.js');
+var _ = require('lodash');
 
 function updatePiecesWhichCanReceiveFreeEnergy(game)
 {

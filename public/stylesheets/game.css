@@ -9,8 +9,8 @@ td:hover {background-color: #FFFFE0;}
 
 #victoryPointTokenSupply {position: absolute; top: 47%; left: 60%; color: #33cc33; font-weight: bold;}
 
-.flatPiece {position: absolute; font-size: 14px; left: 27%; bottom: 5%; font-weight: 500; background-color: transparent;} 
-.piece {position: absolute; font-size: 14px; left: 27%; top: 5%; font-weight: 500; background-color: transparent;}
+.flatPiece {position: absolute; font-size: 15px; left: 27%; bottom: 5%; font-weight: 500; background-color: transparent;} 
+.piece {position: absolute; font-size: 15px; left: 27%; top: 5%; font-weight: 500; background-color: transparent;}
 .resource {position: absolute; height: 25%; width: 25%; right: 5%; top: 60%; background-color: transparent;}
 .resource img {max-width: 100%; max-height: 100%; display: block; background-color: transparent;}
 

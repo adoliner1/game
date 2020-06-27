@@ -1,6 +1,6 @@
 var _ = require('lodash');
-var utils = require('./piece_utils');
-var constants = require('./constants');
+var utils = require('./pieceUtilities.js');
+var constants = require('../utilities/constants.js');
 
 var baseSet = {}
 var nonBaseSet = {}

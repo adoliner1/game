@@ -342,7 +342,7 @@ $(function ()
 	})
 
 	//button handlers
-	$('#energizeButton').submit(function(e)
+	$('#energizeButton').click(function(e)
 	{
 		clickSound.play()
 		disableAllActionButtons()
@@ -350,7 +350,7 @@ $(function ()
 		socket.emit('request to energize', currentlySelectedTile, false)
 	})
 
-	$('#energizeFlatPieceButton').submit(function(e)
+	$('#energizeFlatPieceButton').click(function(e)
 	{
 		clickSound.play()
 		disableAllActionButtons()
@@ -358,7 +358,7 @@ $(function ()
 		socket.emit('request to energize', currentlySelectedTile, true)		
 	})
 
-	$('#endActionPhaseButton').submit(function(e)
+	$('#endActionPhaseButton').click(function(e)
 	{
 		clickSound.play()
 		disableAllButtons()
@@ -366,7 +366,7 @@ $(function ()
 		socket.emit('request to end action phase')
 	})
 
-	$('#endTurnButton').submit(function(e)
+	$('#endTurnButton').click(function(e)
 	{
 		clickSound.play()
 		disableAllButtons()
@@ -374,7 +374,7 @@ $(function ()
 		socket.emit('request to end turn')
 	})
 	
-	$('#buildButton').submit(function(e)
+	$('#buildButton').click(function(e)
 	{
 		clickSound.play()
 		disableAllActionButtons()
@@ -383,7 +383,7 @@ $(function ()
 		socket.emit('request tiles which can be built on', currentInventoryPosition)
 	})
 
-	$('#moveButton').submit(function(e)
+	$('#moveButton').click(function(e)
 	{
 		clickSound.play()
 		disableAllActionButtons()
@@ -392,7 +392,7 @@ $(function ()
 		socket.emit('request tiles which can be moved to and the paths there', currentlySelectedTile)
 	})
 	
-	$('#buyButton').submit(function(e)
+	$('#buyButton').click(function(e)
 	{
 		clickSound.play()
 		e.preventDefault()
@@ -400,7 +400,7 @@ $(function ()
 		socket.emit('request piece purchase', currentlySelectedStorePiece)
     })
 
-	$('#activateButton').submit(function(e)
+	$('#activateButton').click(function(e)
 	{
 		clickSound.play()
 		e.preventDefault()
@@ -408,7 +408,7 @@ $(function ()
 
     })
 
-	$('#attackButton').submit(function(e)
+	$('#attackButton').click(function(e)
 	{
 		clickSound.play()
 		disableAllActionButtons()
@@ -417,7 +417,7 @@ $(function ()
 		socket.emit('request tiles which can be attacked', currentlySelectedTile)
     })
 
-	$('#attackPieceButton').submit(function(e)
+	$('#attackPieceButton').click(function(e)
 	{
 		clickSound.play()
 		disableAllActionButtons()
@@ -425,7 +425,7 @@ $(function ()
 		socket.emit('request to attack a piece', tilePieceIsPotentiallyAttackingFrom,  currentlySelectedTile, false)
     })
 
-	$('#attackFlatPieceButton').submit(function(e)
+	$('#attackFlatPieceButton').click(function(e)
 	{
 		clickSound.play()
 		disableAllActionButtons()
@@ -433,7 +433,7 @@ $(function ()
 		socket.emit('request to attack a piece', tilePieceIsPotentiallyAttackingFrom,  currentlySelectedTile, true)
     })
 
-	$('#castUnitSpellButton').submit(function(e)
+	$('#castUnitSpellButton').click(function(e)
 	{
 		clickSound.play()
 		disableAllActionButtons()
@@ -442,7 +442,7 @@ $(function ()
 		socket.emit('request tiles unit can cast on', tilePieceIsPotentiallyCastingSpellFrom)
 	})
 
-	$('#castUnitSpellOnPieceButton').submit(function(e)
+	$('#castUnitSpellOnPieceButton').click(function(e)
 	{
 		clickSound.play()
 		disableAllActionButtons()
@@ -451,7 +451,7 @@ $(function ()
 
     })
 
-	$('#castUnitSpellOnFlatPieceButton').submit(function(e)
+	$('#castUnitSpellOnFlatPieceButton').click(function(e)
 	{
 		clickSound.play()
 		disableAllActionButtons()
@@ -460,7 +460,7 @@ $(function ()
 
     })
 
-	$('#castOnFlatPieceButton').submit(function(e)
+	$('#castOnFlatPieceButton').click(function(e)
 	{
 		clickSound.play()
 		disableAllActionButtons()
@@ -469,7 +469,7 @@ $(function ()
 
     })
 
-	$('#castOnPieceButton').submit(function(e)
+	$('#castOnPieceButton').click(function(e)
 	{
 		clickSound.play()
 		disableAllActionButtons()
@@ -478,7 +478,7 @@ $(function ()
 
     })   
 
-	$('#castButton').submit(function(e)
+	$('#castButton').click(function(e)
 	{
 		clickSound.play()
 		e.preventDefault()
@@ -568,19 +568,9 @@ function unhighlightBordersOfTile(tile)
 function unhighlightBordersOfStoreDOMObject(storeDOMObject)
 {
 	if (storeDOMObject != null)
-	{
-		var parentShop = storeDOMObject.closest('table')[0]
-		if (parentShop.id == 'baseSet')
-			storeDOMObject.css("border", "1px solid #6e6e77")
-		else if (parentShop.id == 'nonBaseSetBuildings')
-			storeDOMObject.css("border", "1px solid #6e6e77")
-		else if (parentShop.id == 'nonBaseSetUnits')
-			storeDOMObject.css("border", "1px solid #6e6e77")		
-		else
-			storeDOMObject.css("border", "1px solid #6e6e77")		
-
-	}
+		storeDOMObject.css("border", "2px solid #6e6e77")
 }
+
 
 function unhighlightBordersOfPlayerInventoryDOMObject(inventoryDOMObject)
 {
@@ -616,10 +606,10 @@ function updateDOMForBoard(board)
 			updateDOMForTile(board[col][row])
 }	
 
-
 function updateDOMForTile(tile)
 {
 	var DOMObject = getDOMForTile(tile)
+
 	if (tile.flatPiece != null)
 	{
 		DOMObject.children(".flatPiece").html(tile.flatPiece.boardAvatar)
@@ -628,15 +618,20 @@ function updateDOMForTile(tile)
 		else
 			DOMObject.children(".flatPiece").css("opacity", ".5")
 		if(tile.flatPiece.types.includes("Building"))
-			DOMObject.children(".flatPiece").css("background-color", "#bfbfbf")
+		{
+			DOMObject.children(".flatPiece").css("border", "1px dotted  #404040")
+		}
 
 		assignPieceColor(tile.flatPiece.owner, DOMObject.children(".flatPiece"))
 	}
 	else
 	{
 		DOMObject.children(".flatPiece").html("")
-		DOMObject.children(".flatPiece").css("background-color", "#ffffff")
+		DOMObject.children(".flatPiece").css("font-size", "15px")
+		DOMObject.children(".flatPiece").css("font-style", "normal")
+		DOMObject.children(".flatPiece").css("border", "")
 	}
+
 	if (tile.piece != null)
 	{
 		DOMObject.children(".piece").html(tile.piece.boardAvatar)
@@ -645,17 +640,21 @@ function updateDOMForTile(tile)
 		else
 			DOMObject.children(".piece").css("opacity", ".5")
 		if(tile.piece.types.includes("Building"))
-			DOMObject.children(".piece").css("background-color", "#bfbfbf")
+			DOMObject.children(".piece").css("border", "1px dotted  #404040")
 		else
+		{
 			DOMObject.children(".piece").css("font-style", "italic")
+			DOMObject.children(".piece").css("font-size", "12px")
+		}
 
 		assignPieceColor(tile.piece.owner, DOMObject.children(".piece"))		
 	}
 	else
 	{
-		DOMObject.children(".piece").css("font-style", "normal")
 		DOMObject.children(".piece").html("")
-		DOMObject.children(".piece").css("background-color", "#ffffff")		
+		DOMObject.children(".piece").css("font-size", "15px")
+		DOMObject.children(".piece").css("font-style", "normal")
+		DOMObject.children(".piece").css("border", "")		
 	}
 }
 

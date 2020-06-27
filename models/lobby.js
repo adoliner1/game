@@ -1,6 +1,6 @@
-var pieces = require('../public/javascripts/game/pieces.js')
-var gameMaker = require('../bin/gameMaker')
-var constants = require('../public/javascripts/game/constants.js');
+var pieces = require('./pieces.js')
+var gameMaker = require('./gameMaker.js')
+var constants = require('../utilities/constants.js');
 
 var userNickNames = {};
 var typingUsers = [];
@@ -56,7 +56,7 @@ function activateSocket(io)
 			}
 		})
 
-		//chat funcitons
+		//chat functions
 		socket.on('chat message', function(msg)
 		{
 			if (userNickNames[socket.id]) 
@@ -128,5 +128,5 @@ function activateSocket(io)
 	})
 }
 
-module.exports.beginSocket = beginSocket
+module.exports.activateSocket = activateSocket
 module.exports.gameList = gameList
