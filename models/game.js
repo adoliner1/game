@@ -26,35 +26,6 @@ function activateSocket(io)
       }
     })
 
-    socket.on('request to end action phase', function()
-    {
-      var game = gameUtilities.findGameFromSocketID(socket.id)
-      if (game == null)
-      {
-        io.to(socket.id).emit("new log message", "No such game")
-        return
-      }
-
-      if (game.phase != "Action")
-      {
-        io.to(socket.id).emit("new log message", "Wrong phase")
-        return      
-      }
-
-      var isRedPlayer = gameUtilities.findIfPlayerIsRedPlayerInGameFromSocketID(game, socket.id)
-      var player = (isRedPlayer) ? game.redPlayer : game.bluePlayer
-
-      if (!gameUtilities.findIfItsAPlayersTurnInGame(isRedPlayer, game))
-      {
-        io.to(socket.id).emit("new log message", "Not your turn")
-        return  
-      }
-
-      game.phase = "Energize"
-
-      io.to(game.host).emit('new game state', gameUtilities.convertServerGameToClientGame(game)) 
-    })
-
     socket.on('request to cast a spell', function(inventoryPosition, targetTile, targetID)
     {
       var game = gameUtilities.findGameFromSocketID(socket.id)
@@ -63,12 +34,6 @@ function activateSocket(io)
       {
         io.to(socket.id).emit("new log message", "No such game")
         return
-      }
-
-      if (game.phase != "Action")
-      {
-        io.to(socket.id).emit("new log message", "Wrong phase")
-        return      
       }
 
       var isRedPlayer = gameUtilities.findIfPlayerIsRedPlayerInGameFromSocketID(game, socket.id)
@@ -123,12 +88,6 @@ function activateSocket(io)
       {
         io.to(socket.id).emit("new log message", "No such game")
         return
-      }
-
-      if (game.phase != "Action")
-      {
-        io.to(socket.id).emit("new log message", "Wrong phase")
-        return      
       }
 
       var isRedPlayer = gameUtilities.findIfPlayerIsRedPlayerInGameFromSocketID(game, socket.id)
@@ -192,12 +151,6 @@ function activateSocket(io)
         return
       }
 
-      if (game.phase != "Action")
-      {
-        io.to(socket.id).emit("new log message", "Wrong phase")
-        return      
-      }
-
       if(!pieceSpellCaster.isActive)
       {
         io.to(socket.id).emit("new log message", "Piece is inactive")
@@ -227,12 +180,6 @@ function activateSocket(io)
         return
       }
 
-      if (game.phase != "Action")
-      {
-        io.to(socket.id).emit("new log message", "Wrong phase")
-        return      
-      }
-
       var isRedPlayer = gameUtilities.findIfPlayerIsRedPlayerInGameFromSocketID(game, socket.id)
       var player = (isRedPlayer) ? game.redPlayer : game.bluePlayer
 
@@ -255,12 +202,6 @@ function activateSocket(io)
       {
         io.to(socket.id).emit("new log message", "No such game")
         return
-      }
-
-      if (game.phase != "Action")
-      {
-        io.to(socket.id).emit("new log message", "Wrong phase")
-        return      
       }
 
       var gameTile = game.board[tile.col][tile.row]
@@ -299,12 +240,6 @@ function activateSocket(io)
       {
         io.to(socket.id).emit("new log message", "No such game")
         return
-      }
-
-      if (game.phase != "Action")
-      {
-        io.to(socket.id).emit("new log message", "Wrong phase")
-        return      
       }
 
       var gameVictimTile = game.board[victimTile.col][victimTile.row]
@@ -348,7 +283,7 @@ function activateSocket(io)
       io.to(game.host).emit('new game state', gameUtilities.convertServerGameToClientGame(game))
     })
 
-    socket.on('request tiles which can be built on', function(inventoryPosition)
+    socket.on('request tiles which can be built on', function(pieceToBuild, builderTile)
     {
       var game = gameUtilities.findGameFromSocketID(socket.id)
 
@@ -358,10 +293,32 @@ function activateSocket(io)
         return
       }
 
-      if (game.phase != "Action")
+      var gamePiece = gameUtilities.findPieceInGameStores(game, pieceToBuild)
+
+      if (gamePiece == null)
       {
-        io.to(socket.id).emit("new log message", "Wrong phase")
-        return      
+        io.to(socket.id).emit("new log message", "Piece not in game")
+        return        
+      }
+
+      var builder = game.board[builderTile.col][builderTile.row].piece
+
+      if (builder == null)
+      {
+        io.to(socket.id).emit("new log message", "No builder")
+        return
+      }
+
+      if (!builder.types.includes("Builder"))
+      {
+        io.to(socket.id).emit("new log message", "Not a Builder")
+        return        
+      }
+
+      if (!builder.isActive)
+      {
+        io.to(socket.id).emit("new log message", "Builder not active")
+        return        
       }
 
       var isRedPlayer = gameUtilities.findIfPlayerIsRedPlayerInGameFromSocketID(game, socket.id)
@@ -373,13 +330,17 @@ function activateSocket(io)
         return  
       }
 
-      gamePiece = player.inventory[inventoryPosition]
+      if (gamePiece.cost > player.gold)
+      {
+        io.to(socket.id).emit("new log message", "Not enough gold")
+        return
+      }
 
-      var buildableTiles = gamePiece.getTilesWhichCanBeBuiltOn(game)
-      io.to(socket.id).emit('new active tiles', buildableTiles) 
+      var buildableTiles = builder.buildableTiles(game, pieceToBuild)
+      io.to(socket.id).emit('new active tiles', buildableTiles)
     })
 
-    socket.on('request to build a piece', function(inventoryPosition, tile)
+    socket.on('request to build a piece', function(clientPieceToBuild, clientTileToBuildOn, tileOfBuilder)
     {
       var game = gameUtilities.findGameFromSocketID(socket.id)
 
@@ -389,20 +350,15 @@ function activateSocket(io)
         return
       }
 
-      if (game.phase != "Action")
-      {
-        io.to(socket.id).emit("new log message", "Wrong phase")
-        return      
-      }
-
-      var tileToBuildOn = game.board[tile.col][tile.row]
+      var gameTileToBuildOn = game.board[clientTileToBuildOn.col][clientTileToBuildOn.row]
       var isRedPlayer = gameUtilities.findIfPlayerIsRedPlayerInGameFromSocketID(game, socket.id)
       var player = (isRedPlayer) ? game.redPlayer : game.bluePlayer
-      var piece = player.inventory[inventoryPosition]
+      var builder = game.board[tileOfBuilder.col][tileOfBuilder.row].piece
+      var gamePiece = _.cloneDeep(gameUtilities.findPieceInGameStores(game, clientPieceToBuild))
 
-      if (piece == null)
+      if (gamePiece == null)
       {
-        io.to(socket.id).emit("new log message", "No piece to build")
+        io.to(socket.id).emit("new log message", "Piece not in game")
         return      
       }  
 
@@ -412,33 +368,56 @@ function activateSocket(io)
         return  
       }
 
-      var tilesWhichCanBeBuiltOn = piece.getTilesWhichCanBeBuiltOn(game)
+      if (builder == null)
+      {
+        io.to(socket.id).emit("new log message", "No builder")
+        return
+      } 
 
-      if(!tilesWhichCanBeBuiltOn.includes(tileToBuildOn))
+      if (!builder.types.includes("Builder"))
+      {
+        io.to(socket.id).emit("new log message", "Not a Builder")
+        return        
+      }
+
+      if (!builder.isActive)
+      {
+        io.to(socket.id).emit("new log message", "Builder not active")
+        return        
+      }
+
+      if (gamePiece.cost > player.gold)
+      {
+        io.to(socket.id).emit("new log message", "Not enough gold")
+        return
+      }
+
+      var tilesWhichCanBeBuiltOn = builder.buildableTiles(game, gamePiece)
+
+      if(!tilesWhichCanBeBuiltOn.includes(gameTileToBuildOn))
       {
         io.to(socket.id).emit("new log message", "Can't build there")
         return        
       }
 
-      if (piece.isFlat)
-        tileToBuildOn.flatPiece = piece
+      if (gamePiece.isFlat)
+        gameTileToBuildOn.flatPiece = gamePiece
       else
-        tileToBuildOn.piece = piece
+        gameTileToBuildOn.piece = gamePiece
 
-      piece.currentCol = tileToBuildOn.col
-      piece.currentRow = tileToBuildOn.row
+      gamePiece.currentCol = gameTileToBuildOn.col
+      gamePiece.currentRow = gameTileToBuildOn.row
+      gamePiece.owner = (isRedPlayer) ? 'Red' : 'Blue'
+      gamePiece.canReceiveFreeEnergyAtThisLocation = gamePiece.canReceiveFreeEnergy(game)
+      builder.isActive = false
 
-      piece.canReceiveFreeEnergyAtThisLocation = piece.canReceiveFreeEnergy(game)
+      if ("addReactionsWhenBuilt" in gamePiece)
+        gamePiece.addReactionsWhenBuilt(game)
 
-      if ("addReactionsWhenBuilt" in piece)
-        piece.addReactionsWhenBuilt(game)
+      if ("performOnBuildEffects" in gamePiece)
+        gamePiece.performOnBuildEffects(game)
 
-      if ("performOnBuildEffects" in piece)
-        piece.performOnBuildEffects(game)
-
-      player.inventory[inventoryPosition] = undefined
-
-      io.to(game.host).emit("new log message", player.Name + " builds a(n) " + piece.name + " on col: " + tileToBuildOn.col + " row: " + tileToBuildOn.row)
+      io.to(game.host).emit("new log message", player.Name + " builds a(n) " + gamePiece.name + " on col: " + gameTileToBuildOn.col + " row: " + gameTileToBuildOn.row)
       io.to(game.host).emit('new game state', gameUtilities.convertServerGameToClientGame(game))
     })
 
@@ -452,12 +431,6 @@ function activateSocket(io)
       {
         io.to(socket.id).emit("new log message", "No such game")
         return
-      }
-
-      if (game.phase != "Action")
-      {
-        io.to(socket.id).emit("new log message", "Wrong phase")
-        return      
       }
 
       var isRedPlayer = gameUtilities.findIfPlayerIsRedPlayerInGameFromSocketID(game, socket.id)
@@ -508,11 +481,6 @@ function activateSocket(io)
         return
       }
 
-      if (game.phase != "Action")
-      {
-        io.to(socket.id).emit("new log message", "Wrong phase")
-        return      
-      }
 
       var isRedPlayer = gameUtilities.findIfPlayerIsRedPlayerInGameFromSocketID(game, socket.id)
       var player = (isRedPlayer) ? game.redPlayer : game.bluePlayer
@@ -558,7 +526,7 @@ function activateSocket(io)
       io.to(game.host).emit('new game state', gameUtilities.convertServerGameToClientGame(game))   
     })
 
-    socket.on('request to energize', function(energizeT, isFlatPiece)
+    socket.on('request to energize a piece', function(tileToEnergizePieceOn, isFlatPiece)
     {
       var game = gameUtilities.findGameFromSocketID(socket.id)
 
@@ -568,15 +536,9 @@ function activateSocket(io)
         return
       }
 
-      if (game.phase != "Energize")
-      {
-        io.to(socket.id).emit("new log message", "Wrong phase")
-        return      
-      }
-
       var isRedPlayer = gameUtilities.findIfPlayerIsRedPlayerInGameFromSocketID(game, socket.id)
       var player = (isRedPlayer) ? game.redPlayer : game.bluePlayer
-      var energizeTile = game.board[energizeT.col][energizeT.row]
+      var tileToEnergizePieceOnile = game.board[tileToEnergizePieceOn.col][tileToEnergizePieceOn.row]
 
       if (!gameUtilities.findIfItsAPlayersTurnInGame(isRedPlayer, game))
       {
@@ -585,9 +547,9 @@ function activateSocket(io)
       }
 
       if (isFlatPiece)
-        var piece = energizeTile.flatPiece
+        var piece = tileToEnergizePieceOnile.flatPiece
       else
-        var piece = energizeTile.piece
+        var piece = tileToEnergizePieceOnile.piece
 
       if (!gameUtilities.findIfAPlayerOwnsAPiece(isRedPlayer, piece))
       {
@@ -595,46 +557,36 @@ function activateSocket(io)
         return        
       }
 
-
-      if (piece.energy >= piece.energyCapacity)
+      //and piece can't store energy 
+      if (piece.isActive)
       {
-        io.to(socket.id).emit("new log message", "Already at maxmimum energy")
+        io.to(socket.id).emit("new log message", "Already active and can't store energy")
         return       
       }
 
-      if (player.activeEnergy >= player.energyCapacity)
+      if (piece.minimumEnergyNeededForActivation > player.energy)
       {
-        io.to(socket.id).emit("new log message", "No free energy")
+        io.to(socket.id).emit("new log message", "Not enough energy")
         return             
       }
 
-      io.to(game.host).emit("new log message", player.Name + "'s " + piece.name + " on col: " + energizeTile.col + " row: " + energizeTile.row + " receives an energy")
-      piece.increaseEnergy(game)
+      io.to(game.host).emit("new log message", player.Name + "'s " + piece.name + " on col: " + tileToEnergizePieceOnile.col + " row: " + tileToEnergizePieceOnile.row + " is energized")
+
+      player.energy -= piece.minimumEnergyNeededForActivation
+
+      piece.receiveEnergy(game, piece.minimumEnergyNeededForActivation)
 
       io.to(game.host).emit('new game state', gameUtilities.convertServerGameToClientGame(game))     
     })
 
-    socket.on('request piece purchase', function(clientPiece)
+    socket.on('request pieces which can be purchased', function()
     {
-
       var game = gameUtilities.findGameFromSocketID(socket.id)
-
-      if (clientPiece == null)
-      {
-        io.to(socket.id).emit("new log message", "No piece requested")
-        return
-      }
 
       if (game == null)
       {
         io.to(socket.id).emit("new log message", "No such game")
         return
-      }
-
-      if (game.phase != "Action")
-      {
-        io.to(socket.id).emit("new log message", "Wrong phase")
-        return      
       }
 
       var piece = game.baseSet[clientPiece.name]
@@ -670,12 +622,6 @@ function activateSocket(io)
         return
       }
 
-      if (!player.inventory.includes(undefined))
-      {
-        io.to(socket.id).emit("new log message", "No room in inventory")
-        return
-      }
-
       player.gold = player.gold - piece.cost
       for (var i = 0; i < player.inventory.length; i++) 
       {
@@ -705,22 +651,14 @@ function activateSocket(io)
         return
       }
 
-      if (game.phase != "Energize")
-      {
-        io.to(socket.id).emit("new log message", "Wrong phase")
-        return      
-      }
-
       var isRedPlayer = gameUtilities.findIfPlayerIsRedPlayerInGameFromSocketID(game, socket.id)
       var activePlayer = (isRedPlayer) ? game.redPlayer : game.bluePlayer
 
-      //collection and end of turn activation, effects
-      gameUtilities.restoreMovementForPlayersPieces(game, isRedPlayer)
-      gameUtilities.activatePieces(game, isRedPlayer)
-      activePlayer.goldProduction = gameUtilities.countGoldProductionForPlayer(game, isRedPlayer)
-      activePlayer.gold += activePlayer.goldProduction
-      activePlayer.energyCapacity = gameUtilities.countEnergyCapacityProductionForPlayer(game, isRedPlayer)
-      activePlayer.victoryPointTokenProduction = gameUtilities.countVictoryPointTokenProductionForPlayer(game, isRedPlayer)
+      if (!gameUtilities.findIfItsAPlayersTurnInGame(isRedPlayer, game))
+      {
+        io.to(socket.id).emit("new log message", "Not your turn")
+        return  
+      }
 
       for (var tile of game.getAllTilesInListForm())
       {
@@ -732,26 +670,11 @@ function activateSocket(io)
           flatPiece.performEndOfTurnEffects(game)
       }
     
-      if (game.victoryPointTokenSupply < activePlayer.victoryPointTokenProduction)
-      {
-        activePlayer.victoryPoints += game.victoryPointTokenSupply
-        game.victoryPointTokenSupply = 0
-      }
-      else
-      {
-        activePlayer.victoryPoints += activePlayer.victoryPointTokenProduction
-        game.victoryPointTokenSupply -= activePlayer.victoryPointTokenProduction
-      }
-
-      if (game.victoryPointTokenSupply >= game.victoryPointTokenDrip)
-        game.victoryPointTokenSupply -= game.victoryPointTokenDrip
-      else
-        game.victoryPointTokenSupply = 0
 
       //check for dead HQ
       if (game.board[4][1].piece == null || game.board[4][13].piece == null)
       {
-        io.to(game.host).emit("new log message", "Game over, HQ destroyed")      
+        io.to(game.host).emit("new log message", "Game over, HQ destroyed")
 
         if (game.board[4][1].piece == null && game.board[4][13].piece == null)
           io.to(game.host).emit("new log message", "It's a tie")
@@ -783,7 +706,6 @@ function activateSocket(io)
       //switch players turn
       game.isRedPlayersTurn = !game.isRedPlayersTurn
       isRedPlayer = !isRedPlayer
-      game.phase = "Action"
 
       for (var tile of game.getAllTilesInListForm())
       {

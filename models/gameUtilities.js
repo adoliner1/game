@@ -11,17 +11,6 @@ function restoreMovementForPlayersPieces(game, isRedPlayer)
   }  
 }
 
-function activatePieces(game, isRedPlayer)
-{
-  for (tile of game.getAllTilesInListForm())
-  {
-    if(tile.piece != null && findIfAPlayerOwnsAPiece(isRedPlayer, tile.piece) && tile.piece.energy >= tile.piece.minimumEnergyNeededForActivation)
-      tile.piece.activate(game)
-    if(tile.flatPiece != null && findIfAPlayerOwnsAPiece(isRedPlayer, tile.flatPiece) && tile.flatPiece.energy >= tile.flatPiece.minimumEnergyNeededForActivation)
-      tile.flatPiece.activate(game)
-  }
-}
-
 function updateCanReceiveFreeEnergies(game)
 {
   for (var tile of game.getAllTilesInListForm())
@@ -33,76 +22,6 @@ function updateCanReceiveFreeEnergies(game)
   } 
 }
 
-function countGoldProductionForPlayer(game, isRedPlayer)
-{
-  var totalGoldProduction = 0
-  for (tile of game.getAllTilesInListForm())
-  {
-    if (tile.statuses.includes("Gold*1"))
-      var multiplier = 1
-    else if (tile.statuses.includes("Gold*2"))
-      var multiplier = 2
-    else if (tile.statuses.includes("Gold*3"))
-      var multiplier = 3
-    else
-      var multiplier = 0
-
-    if (tile.piece != null && tile.piece.name == "Headquarters")
-      multiplier = 1
-    if(tile.piece != null && findIfAPlayerOwnsAPiece(isRedPlayer, tile.piece) && tile.piece.goldProduction != null && tile.piece.isActive)
-      totalGoldProduction += tile.piece.goldProduction * multiplier
-    if(tile.flatPiece != null && findIfAPlayerOwnsAPiece(isRedPlayer, tile.flatPiece) && tile.flatPiece.goldProduction != null && tile.flatPiece.isActive)
-      totalGoldProduction += tile.flatPiece.goldProduction * multiplier
-  }
-  return totalGoldProduction
-}
-
-function countVictoryPointTokenProductionForPlayer(game, isRedPlayer)
-{
-  var totalVictoryPointTokenProduction = 0
-  for (tile of game.getAllTilesInListForm())
-  {
-    if (tile.statuses.includes("Victory Point Tokens*2"))
-      var multiplier = 2
-    else if (tile.statuses.includes("Victory Point Tokens*3"))
-      var multiplier = 3
-    else
-      var multiplier = 0
-
-    if(tile.piece != null && findIfAPlayerOwnsAPiece(isRedPlayer, tile.piece) && tile.piece.victoryPointTokenProduction != null && tile.piece.isActive)
-      totalVictoryPointTokenProduction += tile.piece.victoryPointTokenProduction*multiplier
-    if(tile.flatPiece != null && findIfAPlayerOwnsAPiece(isRedPlayer, tile.flatPiece) && tile.flatPiece.victoryPointTokenProduction != null && tile.flatPiece.isActive)
-      totalVictoryPointTokenProduction += tile.flatPiece.victoryPointTokenProduction*multiplier
-  }
-  return totalVictoryPointTokenProduction    
-}
-
-
-function countEnergyCapacityProductionForPlayer(game, isRedPlayer)
-{
-  var totalEnergyCapacityProduction = 0
-  for (tile of game.getAllTilesInListForm())
-  {
-    if (tile.statuses.includes("Energy*1"))
-      var multiplier = 1
-    else if (tile.statuses.includes("Energy*2"))
-      var multiplier = 2
-    else if (tile.statuses.includes("Energy*3"))
-      var multiplier = 3
-    else
-      var multiplier = 0
-
-    if (tile.piece != null && tile.piece.name == "Headquarters")
-      multiplier = 1
-
-    if(tile.piece != null && findIfAPlayerOwnsAPiece(isRedPlayer, tile.piece) && tile.piece.energyCapacityProduction != null && tile.piece.isActive)
-      totalEnergyCapacityProduction += tile.piece.energyCapacityProduction*multiplier
-    if(tile.flatPiece != null && findIfAPlayerOwnsAPiece(isRedPlayer, tile.flatPiece) && tile.flatPiece.energyCapacityProduction != null && tile.flatPiece.isActive)
-      totalEnergyCapacityProduction += tile.flatPiece.energyCapacityProduction*multiplier
-  }
-  return totalEnergyCapacityProduction    
-}
-
 function convertServerBoardToClientBoard(board)
 {
   var clientBoard = new Array(constants.boardWidth)
@@ -112,7 +31,7 @@ function convertServerBoardToClientBoard(board)
     for (var row = 0; row < constants.boardLength; row++) 
     {
       var gameTile = board[col][row]
-      var clientTile = {piece: getPieceForClientFromGamePiece(gameTile.piece), flatPiece: getPieceForClientFromGamePiece(gameTile.flatPiece), statuses: gameTile.statuses, row: row, col: col}
+      var clientTile = {piece: getPieceForClientFromGamePiece(gameTile.piece), flatPiece: getPieceForClientFromGamePiece(gameTile.flatPiece), statuses: gameTile.statuses, row: row, col: col, resource: gameTile.resource}
       clientBoard[col][row] = clientTile
     }
   }
@@ -132,13 +51,10 @@ function convertServerGameToClientGame(game)
 {
   var clientGame = {}
   clientGame.host = game.host
-  clientGame.phase = game.phase
   clientGame.victoryPointTokenSupply = game.victoryPointTokenSupply
   clientGame.victoryPointTokenDrip = game.victoryPointTokenDrip
   clientGame.redPlayer = _.cloneDeep(game.redPlayer)
   clientGame.bluePlayer = _.cloneDeep(game.bluePlayer)
-  clientGame.redPlayer.inventory = (game.redPlayer.inventory).map(getPieceForClientFromGamePiece)
-  clientGame.bluePlayer.inventory = (game.bluePlayer.inventory).map(getPieceForClientFromGamePiece)
   clientGame.isRedPlayersTurn = game.isRedPlayersTurn
   clientGame.board = convertServerBoardToClientBoard(game.board)
   clientGame.baseSet = convertDictionaryToList(game.baseSet).map(getPieceForClientFromGamePiece)
@@ -146,6 +62,21 @@ function convertServerGameToClientGame(game)
   clientGame.nonBaseSetUnits = convertDictionaryToList(game.nonBaseSetUnits).map(getPieceForClientFromGamePiece)
   clientGame.nonBaseSetSpells = convertDictionaryToList(game.nonBaseSetSpells).map(getPieceForClientFromGamePiece)
   return clientGame
+}
+
+function findPieceInGameStores(game, pieceToFind)
+{
+  var piece = game.baseSet[pieceToFind.name]
+  if (piece == null) 
+  {
+    if (pieceToFind.types.includes("Building"))
+      piece = game.nonBaseSetBuildings[pieceToFind.name]
+    else if (pieceToFind.types.includes("Unit"))
+      piece = game.nonBaseSetUnits[pieceToFind.name]
+    else
+      piece = game.nonBaseSetSpells[pieceToFind.name]
+  }
+  return piece
 }
 
 function findIfItsAPlayersTurnInGame(isRedPlayer, game){
@@ -192,11 +123,8 @@ module.exports =
 {
   findIfItsAPlayersTurnInGame,
   restoreMovementForPlayersPieces,
-  activatePieces, 
   updateCanReceiveFreeEnergies,
-  countGoldProductionForPlayer,
-  countVictoryPointTokenProductionForPlayer, 
-  countEnergyCapacityProductionForPlayer,
+  findPieceInGameStores,
   convertServerBoardToClientBoard,
   getPieceForClientFromGamePiece,
   convertServerGameToClientGame,

@@ -12,13 +12,13 @@ function createNewGame(name, host)
 		board[col] = new Array(constants.boardLength);
 		for (var row = 0; row < constants.boardLength; row++) 
 		{
-		  var tile = {piece: null, flatPiece: null, statuses: [], row: row, col: col}
+		  var tile = {piece: null, flatPiece: null, statuses: [], row: row, col: col, resource: ""}
 		  board[col][row] = tile
 		}
 	}
 
 	//set central square VP multiplier
-	board[constants.centerVPTokensTile.col][constants.centerVPTokensTile.row].statuses.push("Victory Point Tokens*3")
+	board[constants.centerVPTokensTile.col][constants.centerVPTokensTile.row].resource = "Victory Point Tokens: 3"
 
 	//create blue HQ
 	board[constants.blueHQTile.col][constants.blueHQTile.row].piece = _.cloneDeep(pieces.baseSet['Headquarters'])
@@ -66,8 +66,8 @@ function createNewGame(name, host)
 	var newGame =   
 	{
 		host: host,
-		redPlayer: {socketID: null, turnsTaken: 0, Name: name, goldProduction: 5, gold: 10, victoryPointTokenProduction: 0, victoryPoints: 0, activeEnergy: 2, energyCapacity: 6, inventory: Array(5)},
-		bluePlayer: {socketID: null, turnsTaken: 0, Name: host, goldProduction: 5, gold: 10, victoryPointTokenProduction: 0, victoryPoints: 0, activeEnergy: 2, energyCapacity: 6, inventory: Array(5)},
+		redPlayer: {socketID: null, turnsTaken: 0, Name: name, gold: 5, victoryPoints: 0, energy: 2},
+		bluePlayer: {socketID: null, turnsTaken: 0, Name: host, gold: 10, victoryPoints: 0, energy: 2},
 		board: board,
 		reactions: new Map,
 		baseSet: nonHQBaseSet,
@@ -76,7 +76,6 @@ function createNewGame(name, host)
 		nonBaseSetSpells: selectRandomNonBaseSet(pieces.nonBaseSetSpells),
 		victoryPointTokenSupply: 100,
 		victoryPointTokenDrip: 1,
-		phase: "Action",
 		isRedPlayersTurn: true,
 
 		getAllTilesInListForm: function()
@@ -98,7 +97,7 @@ function createNewGame(name, host)
 
 function assignStartingBaseBonuses(game)
 {
-  var bonusToAdd = "Gold*1"
+  var bonusToAdd = "Gold: 1"
   var numberOfBonuses = 0
   while (numberOfBonuses < 2)
   {
@@ -109,13 +108,13 @@ function assignStartingBaseBonuses(game)
 
     if (tile.statuses.length == 0 && tile.piece == null)
     {
-      tile.statuses.push(bonusToAdd)
-      sisterTile.statuses.push(bonusToAdd)
+      tile.resource = bonusToAdd
+      sisterTile.resource = bonusToAdd
       numberOfBonuses ++
     }
   }
 
-  var bonusToAdd = "Energy*1"
+  var bonusToAdd = "Energy: 1"
   var numberOfBonuses = 0
   while (numberOfBonuses < 2)
   {
@@ -126,8 +125,8 @@ function assignStartingBaseBonuses(game)
 
     if (tile.statuses.length == 0 && tile.piece == null)
     {
-      tile.statuses.push(bonusToAdd)
-      sisterTile.statuses.push(bonusToAdd)
+      tile.resource = bonusToAdd
+      sisterTile.resource = bonusToAdd
       numberOfBonuses ++
     }
   }
@@ -147,26 +146,26 @@ function assignBonusesOfType(game, bonusType)
       if (randomRow < 6)
       {
         if (bonusType == "G")
-          var bonusToAdd = "Gold*2"
+          var bonusToAdd = "Gold: 2"
         else if(bonusType == "V")
-          var bonusToAdd = "Victory Point Tokens*2"
+          var bonusToAdd = "Victory Point Tokens: 2"
         else
-          var bonusToAdd = "Energy*2"
+          var bonusToAdd = "Energy: 2"
       }
       else
       {
         if (bonusType == "G")
-          var bonusToAdd = "Gold*3"
+          var bonusToAdd = "Gold: 3"
         else if(bonusType == "V")
-          var bonusToAdd = "Victory Point Tokens*3"
+          var bonusToAdd = "Victory Point Tokens: 3"
         else
-          var bonusToAdd = "Energy*3"
+          var bonusToAdd = "Energy: 3"
       }
 
       var sisterTile = game.board[constants.boardWidth-randomCol-1][constants.boardLength-randomRow-1]
 
-      tile.statuses.push(bonusToAdd)
-      sisterTile.statuses.push(bonusToAdd)
+      tile.resource = bonusToAdd
+      sisterTile.resource = bonusToAdd
       numberOfBonuses ++
     }
   }
@@ -181,7 +180,7 @@ function getRandomNumberBetweenMinAndMax(min, max)
 function selectRandomNonBaseSet(pieces)
 {
   var randomNonBaseSet = {}
-  addUniqueRandomPiecesFromSourceToDestination(pieces, randomNonBaseSet, 5)
+  addUniqueRandomPiecesFromSourceToDestination(pieces, randomNonBaseSet, 6)
   return randomNonBaseSet
 }
 

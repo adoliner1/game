@@ -9,9 +9,7 @@ html
       script(src='/game.js')
   body
     section(id='boardAndInventoriesAndNavBar')
-      section(id='buttons')
-        form(id='endActionPhaseButton' action='')
-          button Go to Energize Phase         
+      section(id='buttons')       
         form(id='buyButton' action='')
           button Buy
         form(id='moveButton' action='')
@@ -42,7 +40,7 @@ html
           button Cast Unit Spell On Piece
         form(id='castUnitSpellOnFlatPieceButton' action='')
           button Cast Unit Spell On Flat Piece
-      p(id="victoryPointTokenSupply")       
+      p(id="victoryPointTokenSupply") 
       table(id='board')
         each col in Array(boardLength)
           tr
@@ -51,15 +49,6 @@ html
                 div(class='piece')
                 div(class='flatPiece')
                 div(class='resource')
-
-      each val in ['redInventory', 'blueInventory']
-        table(id=val class='inventory')
-          tr
-            td
-            td
-            td
-            td
-            td
       each val in ['redPlayerResources', 'bluePlayerResources']
         section(id=val class='resources')
           p(class='gold')

@@ -47,33 +47,6 @@ var surge = new Surge
 nonBaseSet[surge.name] = surge.name
 nonBaseSetSpells[surge.name] = surge
 
-class InstantActivate extends Spell
-{
-    constructor()
-  {
-    super("Instant Activate", "activates a friendly piece if it has enough energy", ["Spell"], 5, "IA", "Piece")
-  }
-
-  getTilesWhichCanBeCastOn(game)
-  {
-    if (this.owner == "Red")
-      var isRedPlayer = true
-    else
-      var isRedPlayer = false
-    return utils.getTilesWithAFriendlyPieceOrAFriendlyFlatPiece(isRedPlayer, utils.getTilesInRangeOfAFriendlyActiveCaster(game, this.owner))
-  }
-
-  cast(game, targetPiece)
-  {
-    if (targetPiece.energy >= targetPiece.minimumEnergyNeededForActivation)
-      targetPiece.isActive = true
-  }
-}
-
-var instantActivate = new InstantActivate
-nonBaseSet[instantActivate.name] = instantActivate
-nonBaseSetSpells[instantActivate.name] = instantActivate
-
 class GlobalSurge extends Spell
 {
   constructor()
@@ -232,13 +205,12 @@ var detonate = new Detonate
 nonBaseSet[detonate.name] = detonate
 nonBaseSetSpells[detonate.name] = detonate
 
-
 ////////////////////////////
 //pieces
 ////////////////////////////
 class Piece
 {
-  constructor(name, description, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, healthCapacity, attackRange, isFlat, canAttack)
+  constructor(name, description, boardAvatar, types, cost, strength, movementCapacity, healthCapacity, attackRange, isFlat, canAttack)
   {
     this.name = name;
     this.description = description
@@ -246,7 +218,6 @@ class Piece
     this.types = types;
     this.cost = cost;
     this.energy = 0
-    this.energyCapacity = energyCapacity
     this.strength = strength
     this.movement = 0
     this.movementCapacity = movementCapacity
@@ -266,6 +237,7 @@ class Piece
 
   activate(game)
   {
+    this.movement = this.movementCapacity
     this.isActive = true
   }
 
@@ -278,6 +250,14 @@ class Piece
   {
     var pieceTile = this.getCurrentTile(game)
     return utils.tileIsInRangeOfFriendlyConduit(game, this.owner, pieceTile)
+  }
+
+  receiveEnergy(game, amountOfEnergy)
+  {
+    if (this.storedEnergy == undefined)
+      this.activate(game)
+    else
+      this.storedEnergy += amountOfEnergy
   }
 
   getAttackableTiles(game)
@@ -322,8 +302,7 @@ class Piece
         }
       }
 
-      this.canReceiveFreeEnergyAtThisLocation = this.canReceiveFreeEnergy(game, path[leadIndex])
-
+      this.canReceiveFreeEnergyAtThisLocation = this.canReceiveFreeEnergy(game)
       leadIndex ++
       followIndex ++ 
     }
@@ -390,32 +369,6 @@ class Piece
       this.health = this.healthCapacity
   }
 
-  increaseEnergy(game)
-  {
-    if (this.energy < this.energyCapacity)
-    {
-      this.energy += 1
-      if (this.owner == "Red")
-        game.redPlayer.activeEnergy ++
-      else
-        game.bluePlayer.activeEnergy ++
-    }
-  }
-
-  reduceEnergy(game)
-  {
-    if(this.energy != 0)
-    {
-      this.energy -= 1
-      if (this.owner == "Red")
-        game.redPlayer.activeEnergy --
-      else
-        game.bluePlayer.activeEnergy --
-    }
-    if(this.energy == 0)
-      this.deactivate(game)
-  }
-
   increaseMovement(amount)
   {
     if (this.movement  + amount <= this.movementCapacity)
@@ -463,10 +416,6 @@ class Piece
       for (var [reactionTile, reactionsList] of game.reactions) 
         utils.removeValueFromArray(reactionsList, this)
 
-    if(this.owner == "Red")
-      game.redPlayer.activeEnergy -= this.energy
-    else
-      game.bluePlayer.activeEnergy -= this.energy
     if (this.isFlat)
       victimTile.flatPiece = null
     else
@@ -474,12 +423,12 @@ class Piece
   }
 }
 
-//name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, health, attackRange, isFlat, canAttack)
+//name, description, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, health, attackRange, isFlat, canAttack)
 class Turret extends Piece
 {
   constructor()
   {
-    super("Turret", "unit spell: deal 1 damage to a piece within 2 tiles", "TU", ["Building"], 4, 1, 0, 0, 3, 0, false, false)    
+    super("Turret", "unit spell: deal 1 damage to a piece within 2 tiles", "TU", ["Building"], 4, 0, 0, 3, 0, false, false)    
   }
 
   getTilesThatUnitSpellCanBeCastOn(game)
@@ -504,7 +453,7 @@ class RepairShop extends Piece
 {
   constructor()
   {
-    super("Repair Shop", "at the start of your turn, friendly pieces within 2 tiles of this get +1 health", "RS", ["Building"], 4, 1, 0, 0, 3, 0, false, false)    
+    super("Repair Shop", "at the start of your turn, friendly pieces within 2 tiles of this get +1 health", "RS", ["Building"], 4, 0, 0, 3, 0, false, false)    
   }
 
   performStartOfTurnEffects(game)
@@ -534,7 +483,7 @@ class FieldDrainer extends Piece
 {
   constructor()
   {
-    super("Field Drainer", "at the start of your turn, enemy pieces within 2 tiles of this lose 1 energy", "FD", ["Building"], 4, 1, 0, 0, 4, 0, false, false)    
+    super("Field Drainer", "at the start of your turn, enemy pieces within 2 tiles of this lose 1 energy", "FD", ["Building"], 4, 0, 0, 4, 0, false, false)    
   }
 
   performStartOfTurnEffects(game)
@@ -555,16 +504,16 @@ class FieldDrainer extends Piece
   }
 }
 
-var fieldDrainer = new FieldDrainer
-nonBaseSet[fieldDrainer.name] = fieldDrainer
-nonBaseSetBuildings[fieldDrainer.name] = fieldDrainer
+//var fieldDrainer = new FieldDrainer
+//nonBaseSet[fieldDrainer.name] = fieldDrainer
+//nonBaseSetBuildings[fieldDrainer.name] = fieldDrainer
 
 //name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, health, attackRange, isFlat, canAttack)
 class MovementPad extends Piece
 {
   constructor()
   {
-    super("Movement Pad", "when a friendly piece moves on to this it gets +1 movement", "MP", ["Building"], 3, 1, 0, 0, 1, 0, true, false)    
+    super("Movement Pad", "when a friendly piece moves on to this it gets +1 movement. this piece remains active", "MP", ["Building"], 3, 0, 0, 1, 0, true, false)    
   }
 
   react(game, pieceThatTriggeredReaction, tilePieceMovedFrom)
@@ -591,7 +540,7 @@ class BoostPad extends Piece
 {
   constructor()
   {
-    super("Boost Pad", "when a friendly piece moves on to this it moves (without costing movement) 3 more spaces in the direction it was just moving. if that path is obstructed, it moves as far as it can. all previous plans for movement this piece had are lost", "BP", ["Building"], 3, 1, 0, 0, 1, 0, true, false)    
+    super("Boost Pad", "when a friendly piece moves on to this it moves (without costing movement) 3 more spaces in the direction it was just moving. if that path is obstructed, it moves as far as it can. all previous plans for movement this piece had are lost. this piece remains active", "BP", ["Building"], 3, 0, 0, 1, 0, true, false)    
   }
 
   //returns true if the previous movement needs to be halted
@@ -655,7 +604,7 @@ class EnergyPad extends Piece
 {
   constructor()
   {
-    super("Energy Pad", "if there's a piece on this at the start of your turn, it gains 1 energy", "EP", ["Building"], 3, 1, 0, 0, 1, 0, true, false)    
+    super("Energy Pad", "if there's a friendly piece on this at the start of your turn, activate it. this piece remains active", "EP", ["Building"], 3, 0, 0, 1, 0, true, false)    
   }
 
   performStartOfTurnEffects(game)
@@ -664,7 +613,7 @@ class EnergyPad extends Piece
     {
       var pieceTile = this.getCurrentTile(game)
       if (pieceTile.piece != null && pieceTile.piece.owner == this.owner)
-        pieceTile.piece.increaseEnergy(game)
+        pieceTile.piece.activate(game)
     }
   }
 }
@@ -673,12 +622,12 @@ var energyPad = new EnergyPad
 nonBaseSet[energyPad.name] = energyPad
 nonBaseSetBuildings[energyPad.name] = energyPad
 
-//name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, health, attackRange, isFlat, canAttack)
+//name, description, owner, boardAvatar, types, cost, strength, movementCapacity, health, attackRange, isFlat, canAttack)
 class Wall extends Piece
 {
   constructor()
   {
-    super("Wall", "has no energy capacity, cannot be activated", "WA", ["Building"], 2, 0, 0, 0, 1, 0, false, false)    
+    super("Wall", "cannot be activated", "WA", ["Building"], 2, 0, 0, 1, 0, false, false)    
   }
 }
 
@@ -690,7 +639,7 @@ class SpikeTrap extends Piece
 {
   constructor()
   {
-    super("Spike Trap", "when an enemy piece moves on to this it takes 1 damage", "ST", ["Building"], 2, 1, 0, 0, 1, 0, true, false)    
+    super("Spike Trap", "when an enemy piece moves on to this it takes 2 damage. this piece remains active", "ST", ["Building"], 2, 0, 0, 1, 0, true, false)    
   }
 
   react(game, pieceThatTriggeredReaction, tilePieceMovedFrom)
@@ -717,23 +666,7 @@ class Archer extends Piece
 {
   constructor()
   {
-    super("Archer", "+1 energy = +1 strength -- can't attack through non-flat pieces.", "AR", ["Unit"], 4, 2, 0, 1, 1, 2, false, true)
-  }
-
-  increaseEnergy(game)
-  {
-    var oldEnergy = this.energy
-    super.increaseEnergy(game)
-    if (this.energy > oldEnergy)
-      this.strength += 1
-  }
-
-  reduceEnergy(game)
-  {
-    var oldEnergy = this.energy
-    super.reduceEnergy(game)
-    if (this.energy < oldEnergy)
-      this.strength -= 1
+    super("Archer", "can't attack through non-flat pieces.", "AR", ["Unit"], 4, 2, 1, 1, 2, false, true)
   }
 
   getAttackableTiles(game)
@@ -755,7 +688,7 @@ class PhaserBoy extends Piece
 {
   constructor()
   {
-    super("Phaser Boy", "can't attack through non-flat pieces, attacks in a straight line. this piece loses an energy when it attacks", "PB", ["Unit"], 5, 1, 3, 1, 1, 3, false, true)
+    super("Phaser Boy", "can't attack through non-flat pieces, attacks in a straight line", "PB", ["Unit"], 5, 4, 1, 1, 3, false, true)
   }
 
   getAttackableTiles(game)
@@ -783,8 +716,7 @@ class Scrapper extends Piece
 {
   constructor()
   {
-    super("Scrapper", "when this piece damages a unit, +1 gold. when it kills it, +3 gold. requires 2 energy to activate", "SC", ["Unit"], 5, 2, 3, 1, 1, 1, false, true)
-    this.minimumEnergyNeededForActivation = 2
+    super("Scrapper", "when this piece damages a unit, +1 gold. when it kills one, +3 gold", "SC", ["Unit"], 5, 3, 1, 1, 1, false, true)
   }
 
   attack(game, victim)
@@ -797,7 +729,7 @@ class Scrapper extends Piece
       player.gold ++
     if (victim == null || victim.health <= 0)
       player.gold += 3
-    if (victim.health > 0 && this.energy < 2)
+    if (victim.health > 0)
       victim.respondToAttack(game, this)
   }
 }
@@ -813,7 +745,7 @@ class Sniper extends Piece
 {
   constructor()
   {
-    super("Sniper", "can't attack through non-flat pieces, attacks in a straight line", "SN", ["Unit"], 5, 1, 1, 1, 1, 4, false, true)
+    super("Sniper", "can't attack through non-flat pieces, attacks in a straight line", "SN", ["Unit"], 5, 1, 1, 1, 4, false, true)
   }
 
   getAttackableTiles(game)
@@ -832,14 +764,14 @@ class Swordsman extends Piece
 {
   constructor()
   {
-    super("Swordsman", "when this piece attacks, if it has at least 2 energy, the victim doesn't get to respond", "SW", ["Unit"], 5, 2, 2, 2, 2, 1, false, true)
+    super("Swordsman", "if this piece has at least 2 health when it attacks, the victim doesn't get to respond", "SW", ["Unit"], 5, 2, 2, 2, 1, false, true)
   }
 
   attack(game, victim)
   {
     this.isActive = false
     victim.takeDamage(game, this, this.strength)
-    if (victim.health > 0 && this.energy < 2)
+    if (victim.health > 0 && this.health < 2)
       victim.respondToAttack(game, this)
   }
 }
@@ -850,11 +782,12 @@ nonBaseSetUnits[swordsMan.name] = swordsMan
 
 //name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, health, attackRange, isFlat, canAttack)
 
+//add armor?
 class MammaJamma extends Piece
 {
   constructor()
   {
-    super("MammaJamma", "this piece needs at least 2 energy to be active", "MJ", ["Unit"], 6, 2, 5, 1, 7, 1, false, true)
+    super("MammaJamma", "this piece costs 2 energy to activate", "MJ", ["Unit"], 6, 6, 1, 10, 1, false, true)
     this.minimumEnergyNeededForActivation = 2
   }
 }
@@ -869,7 +802,7 @@ class PowerPriest extends Piece
 {
   constructor()
   {
-    super("Power Priest", "unit spell: a friendly unit in an adjacent tile gets +2 health", "PP", ["Unit", "Conduit"], 5, 1, 0, 2, 1, 0, false, false)
+    super("Power Priest", "unit spell: a friendly unit in an adjacent tile gets +2 health", "PP", ["Unit", "Conduit"], 5, 0, 2, 1, 0, false, false)
     this.energyDistributionRange = 1
     this.hasUnitSpells = true
     this.spellTarget = "Piece"
@@ -910,7 +843,7 @@ class ElectricWizard extends Piece
 {
   constructor()
   {
-    super("Electric Wizard", "unit spell: deal 1 damage to a target within 2 tiles", "EW", ["Unit", "Caster"], 4, 1, 0, 2, 1, 0, false, false)
+    super("Electric Wizard", "unit spell: deal 1 damage to a target within 2 tiles", "EW", ["Unit", "Caster"], 4, 0, 2, 1, 0, false, false)
     this.castingRange = 2
     this.hasUnitSpells = true
     this.spellTarget = "Piece"
@@ -937,7 +870,7 @@ class Blaster extends Piece
 {
   constructor()
   {
-    super("Blaster", "unit spell: target must be a unit, in-line with this piece, within 2 tiles, unobstructed by other pieces. move the target unit 3 tiles away from this piece. if it collides with another piece in these 3 tiles, both pieces take 1 damage. if it collides with the edge of the board in these 3 tiles, it takes 1 damage.", "BT", ["Unit"], 4, 1, 0, 1, 1, 0, false, false)
+    super("Blaster", "unit spell: target must be a unit, in-line with this piece, within 2 tiles, unobstructed by other pieces. move the target unit 3 tiles away from this piece. if it collides with another piece in these 3 tiles, both pieces take 1 damage. if it collides with the edge of the board in these 3 tiles, it takes 1 damage.", "BT", ["Unit"], 4, 0, 1, 1, 0, false, false)
     this.hasUnitSpells = true
     this.spellTarget = "Piece"
   }
@@ -1007,7 +940,7 @@ class Witch extends Piece
 {
   constructor()
   {
-    super("Witch", "unit spell: create Blight on an empty tile within 2 tiles. set the owner based on the Blight's row. >= 8 Blue, <= 6 Red, 7 Neutral", "WI", ["Unit"], 4, 1, 0, 1, 1, 0, false, false)
+    super("Witch", "unit spell: create Blight on an empty tile within 2 tiles. set the owner based on the Blight's row. >= 8 Blue, <= 6 Red, 7 Neutral", "WI", ["Unit"], 4, 0, 1, 1, 0, false, false)
     this.hasUnitSpells = true
     this.spellTarget = "Tile"
   }
@@ -1041,9 +974,9 @@ class Headquarters extends Piece
 {
   constructor()
   {
-    super("Headquarters", "This piece doesn't need to be on a resource tile to produce gold and energy", "HQ", ["Building", "Conduit", "Caster"], 7, 0, 0, 0, 10, 0, false, false)
+    super("Headquarters", "This piece doesn't need to be on a resource tile to produce gold and energy. If this dies, the owner loses the game.", "HQ", ["Building", "Conduit", "Caster"], 7, 0, 0, 10, 0, false, false)
     this.minimumEnergyNeededForActivation = 0
-    this.energyCapacityProduction = 6
+    this.energyCapacityProduction = 2
     this.goldProduction = 5
     this.energyDistributionRange = 4
     this.castingRange = 4
@@ -1059,7 +992,7 @@ class EnergyTower extends Piece
 {
   constructor()
   {
-    super("Energy Tower", "", "ET", ["Building", "Conduit"], 5, 1, 0, 0, 4, 0, false, false)
+    super("Energy Tower", "allows you to distribute energy within 3 tiles of this. remains active", "ET", ["Building", "Conduit"], 5, 0, 0, 4, 0, false, false)
     this.energyDistributionRange = 3
     this.minimumEnergyNeededForActivation = 0
   }
@@ -1086,7 +1019,7 @@ class PulseStick extends Piece
 {
   constructor()
   {
-    super("Pulse Stick", "at the start of your turn, all pieces within 2 tiles of this get +1 energy", "PS", ["Building"], 3, 1, 0, 0, 4, 0, false, false)
+    super("Pulse Stick", "at the start of your turn, all pieces adjacent to this get activated", "PS", ["Building"], 3, 0, 0, 4, 0, false, false)
   }
 
   performStartOfTurnEffects(game)
@@ -1116,27 +1049,8 @@ class Hopper extends Piece
 {
   constructor()
   {
-    super("Hopper", "+1 energy = +1 movement capacity -- this unit moves 2 squares at a time in a line and hops over the first square. if it hops over an enemy piece, that piece takes 3 damage", "HP", ["Unit"], 5, 4, 0, 0, 2, 0, false, false)
+    super("Hopper", "this unit moves 2 squares at a time in a line and hops over the first square. if it hops over an enemy piece, that piece takes 4 damage", "HP", ["Unit"], 5, 0, 2, 2, 0, false, false)
   }  
-
-  increaseEnergy(game)
-  {
-    if (this.energy < this.energyCapacity)
-    {
-      var oldEnergy = this.energy
-      super.increaseEnergy(game)
-      if (this.energy > oldEnergy)
-        this.movementCapacity += 1
-    }
-  }
-
-  reduceEnergy(game)
-  {
-    var oldEnergy = this.energy
-    super.reduceEnergy(game)
-    if (this.energy < oldEnergy)
-      this.movementCapacity -= 1
-  }
 
   getTilesWhichCanBeMovedToAndThePathThere(game)
   {
@@ -1158,24 +1072,24 @@ class Hopper extends Piece
         utils.movePieceFromOneTileToAnother(initialTile, path[leadIndex])
         this.movement = this.movement - 2;
         var movedFromTile = initialTile 
-        movedOverTile = getTileBetweenTwoTilesTwoSpacesApartInLine(game.board, initialTile, path[leadIndex])
+        movedOverTile = utils.getTileBetweenTwoTilesTwoSpacesApartInLine(game.board, initialTile, path[leadIndex])
       }
       else
       {
         utils.movePieceFromOneTileToAnother(path[followIndex], path[leadIndex])
         this.movement = this.movement - 2;
         var movedFromTile = path[followIndex]
-        movedOverTile = getTileBetweenTwoTilesTwoSpacesApartInLine(game.board, path[followIndex], path[leadIndex])
+        movedOverTile = utils.getTileBetweenTwoTilesTwoSpacesApartInLine(game.board, path[followIndex], path[leadIndex])
       }
 
       if (movedOverTile.piece != null && this.owner != movedOverTile.piece.owner)
       {
-        movedOverTile.piece.takeDamage(game, this, 3)
+        movedOverTile.piece.takeDamage(game, this, 4)
       }
 
       if (movedOverTile.flatPiece != null && this.owner != movedOverTile.flatPiece.owner)
       {
-        movedOverTile.flatPiece.takeDamage(game, this, 3)        
+        movedOverTile.flatPiece.takeDamage(game, this, 4)        
       }
 
       if (game.reactions.has(path[leadIndex]))
@@ -1203,23 +1117,7 @@ class AttackDrone extends Piece
 {
   constructor()
   {
-    super("Attack Drone", "+1 energy = +1 strength", "AD", ["Unit"], 3, 2, 0, 2, 1, 1, false, true)
-  }
-
-  increaseEnergy(game)
-  {
-    var oldEnergy = this.energy
-    super.increaseEnergy(game)
-    if (this.energy > oldEnergy)
-      this.strength += 1
-  }
-
-  reduceEnergy(game)
-  {
-    var oldEnergy = this.energy
-    super.reduceEnergy(game)
-    if (this.energy < oldEnergy)
-      this.strength -= 1
+    super("Attack Drone", "", "AD", ["Unit"], 1, 1, 2, 1, 1, false, true)
   }
 }
 
@@ -1231,19 +1129,25 @@ class BuilderDrone extends Piece
 {
   constructor()
   {
-    super("Builder Drone", "builder", "BD", ["Unit", "Builder"], 2, 1, 0, 2, 1, 0, false, false)
+    super("Builder Drone", "builder", "BD", ["Unit", "Builder"], 2, 0, 2, 1, 0, false, false)
+  }
+
+  //tiles this builder can build on in game
+  buildableTiles(game, pieceToBuild)
+  {
+    return utils.getTilesWithoutAPiece(utils.getAdjacentTiles(game.board, this.getCurrentTile(game)))
   }
 }
 
 var builderDrone = new BuilderDrone
 baseSet[builderDrone.name] = builderDrone
 
-//name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, health, attackRange, isFlat, canAttack
+//name, description, owner, boardAvatar, types, cost, strength, movementCapacity, health, attackRange, isFlat, canAttack
 class Drainer extends Piece
 {
   constructor()
   {
-    super("Drainer", "this units attacks reduce the victims energy by 1", "DR", ["Unit"], 5, 1, 1, 3, 2, 1, false, true)
+    super("Drainer", "this units attacks apply ", "DR", ["Unit"], 5, 1, 3, 2, 1, false, true)
   }
 
   attack(game, victim)
@@ -1265,7 +1169,7 @@ class Techies extends Piece
 {
   constructor()
   {
-    super("Techies", "when this unit dies with 2 energy, deal 5 damage to every piece within 2 tiles", "TC", ["Unit"], 5, 2, 1, 2, 1, 1, false, true)
+    super("Techies", "when this unit dies, deal 5 damage to every adjacent piece", "TC", ["Unit"], 5, 1, 2, 1, 1, false, true)
   }
 
   die(game, killer)
@@ -1281,7 +1185,7 @@ class Techies extends Piece
     else
       victimTile.piece = null
 
-    for (var tile of utils.getTilesWithAPieceOrAFlatPiece(utils.getTilesWithinRangeOfTile(game.getAllTilesInListForm(), victimTile, 2)))
+    for (var tile of utils.getTilesWithAPieceOrAFlatPiece(utils.getTilesWithinRangeOfTile(game.getAllTilesInListForm(), victimTile, 1)))
       if (tile.piece != null)
         tile.piece.takeDamage(game, null, 5)
       if (tile.flatPiece != null)
@@ -1313,36 +1217,27 @@ class MagicPowerTower extends Piece
   }
 }
 
-var magicPowerTower = new MagicPowerTower
-nonBaseSet[magicPowerTower.name] = magicPowerTower
-nonBaseSetBuildings[magicPowerTower.name] = magicPowerTower
+//var magicPowerTower = new MagicPowerTower
+//nonBaseSet[magicPowerTower.name] = magicPowerTower
+//nonBaseSetBuildings[magicPowerTower.name] = magicPowerTower
 
 class PowerHut extends Piece
 {
   constructor()
   {
-    super("Power Hut", "when this piece is built its energy production is set based on its distance from your back wall. distance of 1-3 rows: 1, 4-5: 2, 6: 3, 7: 4, >7: 5", "PH", ["Building"], 5, 1, 0, 0, 3, 0, false, false)
-    this.minimumEnergyNeededForActivation = 0
+    super("Power Hut", "at the start of your turn, if this piece is one one of the 3 center rows, +3 energy. this piece remains active", "PH", ["Building"], 5, 0, 0, 3, 0, false, false)
   }
 
-  performOnBuildEffects(game)
-  {
-    var pieceTile = this.getCurrentTile(game)            
-    if (this.owner == "Red")
-      var distanceFromBackWall = pieceTile.row + 1
-    else
-      var distanceFromBackWall = constants.boardLength - pieceTile.row
-      
-    if (distanceFromBackWall <= 3)
-      this.energyCapacityProduction = 1
-    else if(distanceFromBackWall <= 5)
-      this.energyCapacityProduction = 2
-    else if (distanceFromBackWall == 6 )
-      this.energyCapacityProduction = 3
-    else if (distanceFromBackWall == 7)
-      this.energyCapacityProduction = 4
-    else
-      this.energyCapacityProduction = 5
+  performStartOfTurnEffects(game)
+  { 
+    var pieceTile = this.getCurrentTile(game)
+    if (this.isActive && (pieceTile.row == 6 || pieceTile.row == 7 || pieceTile.row == 8))
+    {
+      if(this.owner == "Red")
+        game.redPlayer.energy += 3
+      else
+        game.bluePlayer.energy += 3
+    }
   }
 }
 
@@ -1356,28 +1251,19 @@ class GoldHut extends Piece
 {
   constructor()
   {
-    super("Gold Hut", "when this piece is built its gold production is set based on its distance from your back wall. distance of 1-3 rows: 1, 4-5: 2, 6: 3, 7: 4, >7: 5", "GH", ["Building"], 5, 1, 0, 0, 3, 0, false, false)
-    this.minimumEnergyNeededForActivation = 0
+    super("Gold Hut", "at the start of your turn, if this piece is one one of the 3 center rows, +5 gold. this piece remains active", "GH", ["Building"], 5, 0, 0, 3, 0, false, false)
   }
 
-  performOnBuildEffects(game)
+  performStartOfTurnEffects(game)
   { 
-    var pieceTile = this.getCurrentTile(game)            
-    if (this.owner == "Red")
-      var distanceFromBackWall = pieceTile.row + 1
-    else
-      var distanceFromBackWall = constants.boardLength - pieceTile.row
-      
-    if (distanceFromBackWall <= 3)
-      this.goldProduction = 1
-    else if(distanceFromBackWall <= 5)
-      this.goldProduction = 2
-    else if (distanceFromBackWall == 6 )
-      this.goldProduction = 3
-    else if (distanceFromBackWall == 7)
-      this.goldProduction = 4
-    else
-      this.goldProduction = 5
+    var pieceTile = this.getCurrentTile(game)
+    if (this.isActive && (pieceTile.row == 6 || pieceTile.row == 7 || pieceTile.row == 8))
+    {
+      if(this.owner == "Red")
+        game.redPlayer.gold += 5
+      else
+        game.bluePlayer.gold += 5
+    }
   }
 }
 
@@ -1387,214 +1273,173 @@ var goldHut = new GoldHut
 nonBaseSet[goldHut.name] = goldHut
 nonBaseSetBuildings[goldHut.name] = goldHut
 
-class CopperSmith extends Piece
+class GoldProducer extends Piece
 {
   constructor()
   {
-    super("Copper Smith", "+1 energy = +1 gold production", "CS", ["Building"], 1, 3, 0, 0, 3, 0, false, false)
+    super("Gold Producer", "when activated, produces 3 gold plus whatever gold bonus is on this piece's tile", "GP", ["Building"], 4, 0, 0, 3, 0, false, false)
   }
 
-  increaseEnergy(game)
+  activate(game)
   {
-    var oldEnergy = this.energy
-    super.increaseEnergy(game)
-    if (this.energy > oldEnergy)
-      this.goldProduction += 1
-  }
+    super.activate(game)
+    if(!this.isActive)
+      return
 
-  reduceEnergy(game)
-  {
-    var oldEnergy = this.energy
-    super.reduceEnergy(game)
-    if (this.energy < oldEnergy)
-      this.goldProduction -= 1
+    var pieceTile = this.getCurrentTile(game)
+    if (tile.resource == "Gold: 1")
+      var bonus = 1
+    else if (tile.resource == ("Gold: 2"))
+      var bonus = 2
+    else if (tile.resource == ("Gold: 3"))
+      var bonus = 3
+
+    if(this.owner == "Red")
+      game.redPlayer.gold += 3 + bonus
+    else
+      game.bluePlayer.gold += 3 + bonus
   }
 }
+
 //name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movement, health, attackRange, isFlat, canAttack
-
-var copperSmith = new CopperSmith
-baseSet[copperSmith.name] = copperSmith
-
-class SilverSmith extends Piece
-{
-  constructor()
-  {
-    super("Silver Smith", "+1 energy = +2 gold production", "SS", ["Building"], 5, 3, 0, 0, 3, 0, false, false)
-  }
-
-  increaseEnergy(game)
-  {
-    var oldEnergy = this.energy
-    super.increaseEnergy(game)
-    if (this.energy > oldEnergy)
-      this.goldProduction += 2
-  }
-
-  reduceEnergy(game)
-  {
-    var oldEnergy = this.energy
-    super.reduceEnergy(game)
-    if (this.energy < oldEnergy)
-      this.goldProduction -= 2
-  }
-}
-
-var silverSmith = new SilverSmith
-baseSet[silverSmith.name] = silverSmith
-
-class GoldSmith extends Piece
-{
-  constructor()
-  {
-    super("Gold Smith", "+1 energy = +3 gold production", "GS", ["Building"], 10, 3, 0, 0, 3, 0, false, false)
-  }
-
-  increaseEnergy(game)
-  {
-    var oldEnergy = this.energy
-    super.increaseEnergy(game)
-    if (this.energy > oldEnergy)
-      this.goldProduction += 3
-  }
-
-  reduceEnergy(game)
-  {
-    var oldEnergy = this.energy
-    super.reduceEnergy(game)
-    if (this.energy < oldEnergy)
-      this.goldProduction -= 3
-  }
-}
-
-var goldSmith = new GoldSmith
-baseSet[goldSmith.name] = goldSmith
+var goldProducer = new GoldProducer
+baseSet[goldProducer.name] = goldProducer
 
 //name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movement, health, attackRange, isFlat, canAttack
 
-class SmallPointsMiner extends Piece
+class SmallVictoryPointHarvester extends Piece
 {
   constructor()
   {
-    super("Small Points Miner", "produces (energy*VP square value) vp tokens", "SM", ["Building"], 2, 2, 0, 0, 3, 0, false, false)
-    this.victoryPointTokenProduction = 0
+    super("Small Victory Point Harvester", "when activated, produces victory points equal to the VP resource bonus on this piece's tile", "SV", ["Building"], 5, 0, 0, 3, 0, false, false)
   }
 
-  increaseEnergy(game)
+  activate(game)
   {
-    var oldEnergy = this.energy
-    super.increaseEnergy(game)
-    if (this.energy > oldEnergy)
-      this.victoryPointTokenProduction += 1
-  }
+    super.activate(game)
+    if(!this.isActive)
+      return
 
-  reduceEnergy(game, pieceTile)
-  {
-    var oldEnergy = this.energy
-    super.reduceEnergy(game)
-    if (this.energy < oldEnergy)
-      this.victoryPointTokenProduction -= 1
+    var pieceTile = this.getCurrentTile(game)
+    if (tile.resource == "Victory Point Tokens: 2")
+      var pointsToProduce = 2
+    else if (tile.resource == ("Victory Point Tokens: 3"))
+      var pointsToProduce = 3
+
+    if(this.owner == "Red")
+    {
+      if (game.victoryPointTokenSupply < pointsToProduce)
+      {
+        game.redPlayer.victoryPoints += game.victoryPointTokenSupply
+        game.victoryPointTokenSupply = 0
+      }
+      else
+      {
+        game.redPlayer.victoryPoints += pointsToProduce
+        game.victoryPointTokenSupply -= pointsToProduce
+      }
+    }
+    else
+    {
+      if (game.victoryPointTokenSupply < pointsToProduce)
+      {
+        game.bluePlayer.victoryPoints += game.victoryPointTokenSupply
+        game.victoryPointTokenSupply = 0
+      }
+      else
+      {
+        game.bluePlayer.victoryPoints += pointsToProduce
+        game.victoryPointTokenSupply -= pointsToProduce
+      }      
+    }
   }
 }
 
-var smallPointsMiner = new SmallPointsMiner
-baseSet[smallPointsMiner.name] = smallPointsMiner
+var smallVictoryPointHarvester = new SmallVictoryPointHarvester
+baseSet[smallVictoryPointHarvester.name] = smallVictoryPointHarvester
 
-class MediumPointsMiner extends Piece
+class LargeVictoryPointHarvester extends Piece
 {
   constructor()
   {
-    super("Medium Points Miner", "produces (2*energy*VP square value) vp tokens", "MM", ["Building"], 5, 2, 0, 0, 3, 0, false, false)
-    this.victoryPointTokenProduction = 0
+    super("Large Victory Point Miner", "when activated, produces victory points equal to the VP resource bonus on this piece's tile*2", "LV", ["Building"], 10, 0, 0, 3, 0, false, false)
   }
 
-  increaseEnergy(game, pieceTile)
+  activate(game)
   {
-    var oldEnergy = this.energy
-    super.increaseEnergy(game, pieceTile)
-    if (this.energy > oldEnergy)
-      this.victoryPointTokenProduction += 2
-  }
+    super.activate(game)
+    if(!this.isActive)
+      return
 
-  reduceEnergy(game, pieceTile)
-  {
-    var oldEnergy = this.energy
-    super.reduceEnergy(game, pieceTile)
-    if (this.energy < oldEnergy)
-      this.victoryPointTokenProduction -= 2
+    var pieceTile = this.getCurrentTile(game)
+    if (tile.resource == "Victory Point Tokens: 2")
+      var pointsToProduce = 4
+    else if (tile.resource == ("Victory Point Tokens: 3"))
+      var pointsToProduce = 6
+
+    if(this.owner == "Red")
+    {
+      if (game.victoryPointTokenSupply < pointsToProduce)
+      {
+        game.redPlayer.victoryPoints += game.victoryPointTokenSupply
+        game.victoryPointTokenSupply = 0
+      }
+      else
+      {
+        game.redPlayer.victoryPoints += pointsToProduce
+        game.victoryPointTokenSupply -= pointsToProduce
+      }
+    }
+    else
+    {
+      if (game.victoryPointTokenSupply < pointsToProduce)
+      {
+        game.bluePlayer.victoryPoints += game.victoryPointTokenSupply
+        game.victoryPointTokenSupply = 0
+      }
+      else
+      {
+        game.bluePlayer.victoryPoints += pointsToProduce
+        game.victoryPointTokenSupply -= pointsToProduce
+      }      
+    }
   }
 }
 
-var mediumPointsMiner= new MediumPointsMiner
-baseSet[mediumPointsMiner.name] = mediumPointsMiner
-
-class LargePointsMiner extends Piece
-{
-  constructor()
-  {
-    super("Large Points Miner", "produces (3*energy*VP square value) vp tokens", "LM", ["Building"], 8, 2, 0, 0, 3, 0, false, false)
-    this.victoryPointTokenProduction = 0
-  }
-
-  increaseEnergy(game)
-  {
-    var oldEnergy = this.energy
-    super.increaseEnergy(game)
-    if (this.energy > oldEnergy)
-      this.victoryPointTokenProduction += 3
-  }
-
-  reduceEnergy(game, pieceTile)
-  {
-    var oldEnergy = this.energy
-    super.reduceEnergy(game)
-    if (this.energy < oldEnergy)
-      this.victoryPointTokenProduction -= 3
-  }
-}
-
-var largePointsMiner = new LargePointsMiner
-baseSet[largePointsMiner.name] = largePointsMiner
+var largeVictoryPointHarvester= new LargeVictoryPointHarvester
+baseSet[largeVictoryPointHarvester.name] = largeVictoryPointHarvester
 
 //name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movement, health, attackRange, isFlat, canAttack
 
-class SmallGenerator extends Piece
+class Generator extends Piece
 {
   constructor()
   {
-    super("Small Generator", "+1 energy capacity", "SG", ["Building"], 4, 0, 0, 0, 3, 0, false, false)
-    this.energyCapacityProduction = 1
-    this.minimumEnergyNeededForActivation = 0
+    super("Generator", "at the start of your turn, produces energy equal to the energy resource bonus on this piece's tile. this piece remains active", "GT", ["Building"], 5, 0, 0, 3, 0, false, false)
+  }
+
+  performStartOfTurnEffects(game)
+  { 
+    if (this.isActive)
+    {
+      var pieceTile = this.getCurrentTile(game)
+      if (tile.resource == "Energy: 1")
+        var energyToProduce = 1
+      else if (tile.resource == ("Energy: 2"))
+        var energyToProduce = 2
+      else if (tile.resource == ("Energy: 3"))
+        var energyToProduce = 3
+
+      if(this.owner == "Red")
+        game.redPlayer.energy += energyToProduce
+      else
+        game.bluePlayer.energy += energyToProduce
+    }
   }
 }
 
-var smallGenerator = new SmallGenerator
-baseSet[smallGenerator.name] = smallGenerator
-
-class MediumGenerator extends Piece
-{
-  constructor()
-  {
-    super("Medium Generator", "+2 energy capacity", "MG", ["Building"], 7, 0, 0, 0, 3, 0, false, false)
-    this.energyCapacityProduction = 2
-    this.minimumEnergyNeededForActivation = 0
-  }
-}
-
-var mediumGenerator = new MediumGenerator
-baseSet[mediumGenerator.name] = mediumGenerator
-
-class LargeGenerator extends Piece
-{
-  constructor()
-  {
-    super("Large Generator", "+3 energy capacity", "LG", ["Building"], 9, 0, 0, 0, 3, 0, false, false)
-    this.energyCapacityProduction = 3
-    this.minimumEnergyNeededForActivation = 0
-  }
-}
-
-var largeGenerator = new LargeGenerator
-baseSet[largeGenerator.name] = largeGenerator
+var generator = new Generator
+baseSet[generator.name] = generator
 
 //name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movement, health, attackRange, isFlat, canAttack
 class Blight extends Piece
