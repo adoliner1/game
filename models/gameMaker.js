@@ -58,9 +58,10 @@ function createNewGame(name, host)
 		  tile.piece.owner = "Red"
 	}  
 
-	//create a new base set without the HQ
-	var nonHQBaseSet = _.cloneDeep(pieces.baseSet)
-	delete nonHQBaseSet['Headquarters']
+	//create a new base set remove the HQ and Blight
+	var newBaseSet = _.cloneDeep(pieces.baseSet)
+	delete newBaseSet['Headquarters']
+  delete newBaseSet['Blight']
 
 	//create game object
 	var newGame =   
@@ -69,11 +70,12 @@ function createNewGame(name, host)
 		redPlayer: {socketID: null, turnsTaken: 0, Name: name, gold: 5, victoryPoints: 0, energy: 2},
 		bluePlayer: {socketID: null, turnsTaken: 0, Name: host, gold: 10, victoryPoints: 0, energy: 2},
 		board: board,
-		reactions: new Map,
-		baseSet: nonHQBaseSet,
+		movementReactions: new Map,
+    activationReactions: new Map,
+    deathReactions: new Map,
+		baseSet: newBaseSet,
 		nonBaseSetBuildings: selectRandomNonBaseSet(pieces.nonBaseSetBuildings),
 		nonBaseSetUnits: selectRandomNonBaseSet(pieces.nonBaseSetUnits),
-		nonBaseSetSpells: selectRandomNonBaseSet(pieces.nonBaseSetSpells),
 		victoryPointTokenSupply: 100,
 		victoryPointTokenDrip: 1,
 		isRedPlayersTurn: true,

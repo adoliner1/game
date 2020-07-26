@@ -410,6 +410,7 @@ function activateSocket(io)
       gamePiece.owner = (isRedPlayer) ? 'Red' : 'Blue'
       gamePiece.canReceiveFreeEnergyAtThisLocation = gamePiece.canReceiveFreeEnergy(game)
       builder.isActive = false
+      player.gold -= gamePiece.cost
 
       if ("addReactionsWhenBuilt" in gamePiece)
         gamePiece.addReactionsWhenBuilt(game)

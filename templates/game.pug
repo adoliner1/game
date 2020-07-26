@@ -10,36 +10,27 @@ html
   body
     section(id='boardAndInventoriesAndNavBar')
       section(id='buttons')       
-        form(id='buyButton' action='')
-          button Buy
-        form(id='moveButton' action='')
-          button Move
-        form(id='buildButton' action='')
-          button Build
-        form(id='energizeButton' action='')
-          button Energize
-        form(id='energizeFlatPieceButton' action='')
-          button Energize Flat Piece
-        form(id='endTurnButton' action='')
-          button End Turn
-        form(id='attackButton' action='')
-          button Attack
-        form(id='attackPieceButton' action='')
-          button Attack Piece
-        form(id='attackFlatPieceButton' action='')
-          button Attack Flat Piece
-        form(id='castOnPieceButton' action='')
-          button Cast on Piece
-        form(id='castOnFlatPieceButton' action='')
-          button Cast on flat piece              
-        form(id='castButton' action='')
-          button Cast
-        form(id='castUnitSpellButton' action='')
-          button Cast Unit Spell
-        form(id='castUnitSpellOnPieceButton' action='')
-          button Cast Unit Spell On Piece
-        form(id='castUnitSpellOnFlatPieceButton' action='')
-          button Cast Unit Spell On Flat Piece
+        button(id='buyButton') Buy
+        button(id='moveButton') Move
+        button(id='buildButton') Build
+        button(id='energizeButton') Energize
+        button(id='energizeFlatPieceButton')
+        button(id='endTurnButton') End Turn
+        button(id='attackButton') Attack
+        button(id='attackPieceButton') Attack Piece
+        button(id='attackFlatPieceButton') Attack Flat Piece
+        button(id='castUnitSpellButton') Cast Unit Spell
+        button(id='castUnitSpellOnPieceButton') Cast on Piece
+        button(id='castUnitSpellOnFlatPieceButton') Cast on Flat Piece
+      div(id='stores')
+        table(id='baseSet')
+          tr
+        table(id='nonBaseSetBuildings')
+          tr
+        table(id='nonBaseSetUnits')
+          tr
+        table(id='nonBaseSetSpells')
+          tr
       p(id="victoryPointTokenSupply") 
       table(id='board')
         each col in Array(boardLength)
@@ -56,16 +47,10 @@ html
           p(class='vp')
     section(id='displayerAndShopAndButtonsAndLogSection')
       div(id='displayer')
-        ul(id='pieceProperties')
-        ul(id='flatPieceProperties')      
-        ul(id='tileProperties')
-      div(id='stores')
-        table(id='baseSet')
-          tr
-        table(id='nonBaseSetBuildings')
-          tr
-        table(id='nonBaseSetUnits')
-          tr
-        table(id='nonBaseSetSpells')
-          tr
+          button(class='tabButton' id='displayPieceTabButton') Piece
+          button(class='tabButton' id='displayFlatPieceTabButton') Flat Piece
+          button(class='tabButton' id='displayTileTabButton') Tile
+          ul(id='pieceProperties' class='tabContent')
+          ul(id='flatPieceProperties' class='tabContent')      
+          ul(id='tileProperties' class='tabContent')
       ul(id='log')

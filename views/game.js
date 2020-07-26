@@ -10,7 +10,7 @@ $(function ()
 {
 	//globals
 	var socket = io()
-	window.allButtons = [($('#castUnitSpellOnFlatPieceButton')), ($('#energizeFlatPieceButton')), ($('#castUnitSpellOnPieceButton')), ($('#castUnitSpellButton')), ($('#buyButton')),($('#buildButton')),($('#moveButton')),($('#energizeButton')),($('#castButton')),($('#attackButton')),($('#attackPieceButton')),($('#attackFlatPieceButton')), ($('#castOnFlatPieceButton')), ($('#castOnPieceButton'))]
+	window.allButtons = [($('#castUnitSpellOnFlatPieceButton')), ($('#energizeFlatPieceButton')), ($('#castUnitSpellOnPieceButton')), ($('#castUnitSpellButton')), ($('#buyButton')),($('#buildButton')),($('#moveButton')),($('#energizeButton')),($('#attackButton')),($('#attackPieceButton')),($('#attackFlatPieceButton'))]
 
 	//tiles which can currently be acted on(moved to, attacked, casted on, built on)
 	window.activeTiles = []
@@ -25,7 +25,6 @@ $(function ()
 	//modes are control flow variables
 	window.buildMode = false
 	window.moveMode = false
-	window.castMode = false
 	window.unitCastMode = false
 	window.attackMode = false
 
@@ -65,7 +64,6 @@ $(function ()
 		game.baseSet = convertDictionaryToList(game.baseSet)
 		game.nonBaseSetBuildings = convertDictionaryToList(game.nonBaseSetBuildings)
 		game.nonBaseSetUnits = convertDictionaryToList(game.nonBaseSetUnits)
-		game.nonBaseSetSpells = convertDictionaryToList(game.nonBaseSetSpells)
 
 		game.redPlayer.Name == readCookie("nickName") ? window.isRedPlayer = true : window.isRedPlayer = false
 
@@ -74,7 +72,6 @@ $(function ()
 
 		addNoneBaseSetPiecesToShop(game.nonBaseSetBuildings)
 		addNoneBaseSetPiecesToShop(game.nonBaseSetUnits)
-		addNoneBaseSetPiecesToShop(game.nonBaseSetSpells)
 		addStoreClickHandler()
 
 		enableAndDisableEndTurnButtonAsNeeded(game)
@@ -85,6 +82,14 @@ $(function ()
 		addResourcesToDisplay(game.board)
 		updateVictoryPointTokenSupplyDOM(game.victoryPointTokenSupply, game.victoryPointTokenDrip)
 		updateDOMForBoard(game.board)
+
+		if(isRedPlayer)
+		{
+			$('#board').css('transform', 'rotate(180deg)')
+			for (var row of window.game.board)
+				for (var tile of row)
+					var DOMObject = getDOMForTile(tile).css('transform', 'rotate(180deg)')
+		}
 
 	})
 
@@ -131,19 +136,21 @@ $(function ()
 		activeTiles = getClientTilesFromServertiles(tiles)
 		if (selectStorePieceToPurchaseMode)
 			buildMode = true
+		selectStorePieceToPurchaseMode = false	
 		highlightTilesGreenAndAddHover(activeTiles)
 	})
 
 	$(document).click(function() 
 	{
 		unhighlightBordersOfAllCurrentlyHighlightedDOMObjects()
+    	$('.tabButton').removeClass('activeTab')
 		disableAllButtons()
 		resetTilesColorsAndAddHover(activeTiles)
 		resetTilesColorsAndAddHover(tilesWhichAreHighlightedBecauseTheyCanBeEnergized)
 		activeTiles = []
 		currentlySelectedTile = null
 		updateDisplayerFromTile(null)
-		updateDisplayerFromPiece(null)
+		updateDisplayerFromShop(null)
 	});
 
 	//store click handler
@@ -163,12 +170,10 @@ $(function ()
 				var currentlySelectedStorePiece = game.baseSet[index]
 			else if (parentShop.id == 'nonBaseSetBuildings')
 				var currentlySelectedStorePiece = game.nonBaseSetBuildings[index]
-			else if (parentShop.id == 'nonBaseSetUnits')
-				var currentlySelectedStorePiece = game.nonBaseSetUnits[index]
 			else
-				var currentlySelectedStorePiece = game.nonBaseSetSpells[index]
+				var currentlySelectedStorePiece = game.nonBaseSetUnits[index]
 
-			updateDisplayerFromPiece(currentlySelectedStorePiece)
+			updateDisplayerFromShop(currentlySelectedStorePiece)
 
 			if (selectStorePieceToPurchaseMode)
 			{
@@ -197,24 +202,6 @@ $(function ()
 				socket.emit('request to move a piece', tilePieceIsPotentiallyMovingFrom,  currentlySelectedTile)
 			else if (buildMode)
 				socket.emit('request to build a piece', piecePotentiallyBeingBuilt, currentlySelectedTile, tilePieceIsPotentiallyBuildingFrom)
-			else if (castMode)
-			{
-				if(spell.target == "Piece")
-				{
-					if (currentlySelectedTile.piece != null && currentlySelectedTile.flatPiece != null)
-					{
-						enableAndShowButton($('#castOnFlatPieceButton'))
-						enableAndShowButton($('#castOnPieceButton'))						
-					}
-					else if (currentlySelectedTile.piece != null)
-						socket.emit('request to cast a spell', currentInventoryPosition, currentlySelectedTile, "Piece")
-					else if (currentlySelectedTile.flatPiece != null)
-						socket.emit('request to cast a spell', currentInventoryPosition, currentlySelectedTile, "Flat Piece")
-				}
-				else
-					socket.emit('request to cast a spell', currentInventoryPosition, currentlySelectedTile, "Tile")
-
-			}
 
 			else if(attackMode)
 			{
@@ -270,10 +257,7 @@ $(function ()
 				enableAndShowButton($('#attackButton'))
 			}
 
-			console.log(currentlySelectedTile.piece.isActive)
-			console.log(currentlySelectedTile.piece.canReceiveFreeEnergyAtThisLocation)
 			var playerEnergy = (window.isRedPlayer) ? (game.redPlayer.energy) : (game.bluePlayer.energy)
-			console.log(playerEnergy)
 			if (!currentlySelectedTile.piece.isActive && playerEnergy > 0 && currentlySelectedTile.piece.canReceiveFreeEnergyAtThisLocation)
 			{
 				window.piecePotentiallyBeingEnergized = currentlySelectedTile.piece
@@ -401,32 +385,37 @@ $(function ()
 
     })
 
-	$('#castOnFlatPieceButton').click(function(e)
-	{
-		clickSound.play()
-		disableAllButtons()
-		e.preventDefault()
-		socket.emit('request to cast a spell', currentInventoryPosition, currentlySelectedTile, "Flat Piece")
+    $('#displayPieceTabButton').click(function(e)
+    {
+    	e.preventDefault()
+    	e.stopPropagation()
+    	$('.tabContent').hide()
+    	$('.tabButton').removeClass('activeTab')    	
+    	$('#pieceProperties').show()
+    	$('#displayPieceTabButton').addClass('activeTab')
 
     })
 
-	$('#castOnPieceButton').click(function(e)
-	{
-		clickSound.play()
-		disableAllButtons()
-		e.preventDefault()
-		socket.emit('request to cast a spell', currentInventoryPosition, currentlySelectedTile, "Piece")
-
-    })   
-
-	$('#castButton').click(function(e)
-	{
-		clickSound.play()
-		e.preventDefault()
-		disableAllButtons()
-		castMode = true
-		socket.emit('request tiles which can be cast on', currentInventoryPosition)
+    $('#displayFlatPieceTabButton').click(function(e)
+    {
+    	e.preventDefault()
+    	e.stopPropagation()
+    	$('.tabContent').hide()
+    	$('.tabButton').removeClass('activeTab')
+    	$('#flatPieceProperties').show()
+    	$('#displayFlatPieceTabButton').addClass('activeTab')    	
     })
+
+    $('#displayTileTabButton').click(function(e)
+    {
+    	e.preventDefault()
+    	e.stopPropagation()
+    	$('.tabContent').hide()
+    	$('.tabButton').removeClass('activeTab')    	
+    	$('#tileProperties').show()
+		$('#displayTileTabButton').addClass('activeTab')
+    })
+
 });
 
 function unhighlightBordersOfAllCurrentlyHighlightedDOMObjects()
@@ -459,6 +448,17 @@ function updatePlayerResourcesDOM(isRedPlayer, player)
 		$('#bluePlayerResources p.energy').html(energyDisplay)
 		$('#bluePlayerResources p.vp').html(victoryPointDisplay)
 	}
+
+	if (window.isRedPlayer)
+	{
+		$('#bluePlayerResources').css('top', '3%')
+		$('#redPlayerResources').css('top','91%')
+	}
+	else
+	{
+		$('#redPlayerResources').css('top', '3%')
+		$('#bluePlayerResources').css('top', '91%')
+	}
 }
 
 function highlightBordersOfDOMObject(DOMObject)
@@ -471,21 +471,6 @@ function unhighlightBordersOfStoreDOMObject(storeDOMObject)
 {
 	if (storeDOMObject != null)
 		storeDOMObject.css("border", "2px solid #6e6e77")
-}
-
-function clearBoard(board)
-{
-	for (var col = 0; col < boardWidth; col++)
-	{
-		for (var row = 0; row < boardLength; row++)
-		{
-			var DOMObject = getDOMForTile(board[col][row])
-			DOMObject.flatPiece = null
-			DOMObject.children(".flatPiece").html("")
-			DOMObject.piece = null
-			DOMObject.children(".piece").html("")
-		}
-	}
 }
 
 function updateDOMForBoard(board)
@@ -729,7 +714,7 @@ function setAllModesToFalse()
 {
 	attackMode = false
 	buildMode = false
-	castMode = false
+	unitCastMode = false
 	moveMode = false
 	selectStorePieceToPurchaseMode = false
 }
@@ -746,10 +731,8 @@ function addNoneBaseSetPiecesToShop(nonBaseSet)
 	{
 		if(piece.types.includes("Building"))
 			newCell = $("#nonBaseSetBuildings tr").append('<td>' + piece.boardAvatar + '</td>');
-		else if (piece.types.includes("Unit"))
-			newCell = $("#nonBaseSetUnits tr").append('<td>' + piece.boardAvatar + '</td>');
 		else
-			newCell = $("#nonBaseSetSpells tr").append('<td>' + piece.boardAvatar + '</td>');
+			newCell = $("#nonBaseSetUnits tr").append('<td>' + piece.boardAvatar + '</td>');
 	}
 } 
 
@@ -765,21 +748,16 @@ function enableAndShowButton(button)
 	button.show()
 }
 
-function updateDisplayerFromPiece(piece)
+function updateDisplayerFromShop(piece)
 {
 	clearDisplayerLists()
 	if (piece == null)
 		return
 
-	if (piece.types.includes("Spell"))
-		$('#pieceProperties').append($('<li>').text("Spell"))
-	else
-		$('#pieceProperties').append($('<li>').text("Piece"))
-	$("#pieceProperties li:first" ).first().css("font-weight", "bold")
-	$("#pieceProperties li:first").css("text-decoration", "underline")
+	$('#displayPieceTabButton').click()
 	for (key of Object.keys(piece))
 	{
-		if (key != "boardAvatar" && key != "owner" && key != "canAttack" && key != "canReceiveFreeEnergyAtThisLocation" && key != "currentCol" && key != "currentRow" && key != "isActive" && piece[key] != 0)
+		if (key != "healthCapacity" && key != "boardAvatar" && key != "owner" && key != "canAttack" && key != "canReceiveFreeEnergyAtThisLocation" && key != "currentCol" && key != "currentRow" && key != "isActive" && piece[key] != 0)
 		{
 			var propertyStringDisplay = ("" + key + ": " + piece[key])
 			$('#pieceProperties').append($('<li>').text(propertyStringDisplay))
@@ -805,11 +783,6 @@ function highlightShopPiecesWhichCanBeBought()
 		if(game.nonBaseSetUnits[index].cost <= playerGold)
 			highlightBordersOfDOMObject($(this))
 	});
-	$('#nonBaseSetSpells > tbody > tr > td').each(function(index, tableRow) 
-	{
-		if(game.nonBaseSetSpells[index].cost <= playerGold)
-			highlightBordersOfDOMObject($(this))
-	});
 }
 
 function unhighlightAllStorePieces()
@@ -828,18 +801,12 @@ function unhighlightAllStorePieces()
 	{
 		unhighlightBordersOfStoreDOMObject($(this))
 	});
-
-	$('#nonBaseSetSpells > tbody > tr > td').each(function(index, tableRow) 
-	{
-		unhighlightBordersOfStoreDOMObject($(this))
-	});	
 }
 
 function clearShops()
 {
 	$('#baseSet tr').empty()
 	$('#nonBaseSetBuildings tr').empty()
-	$('#nonBaseSetSpells tr').empty()
 	$('#nonBaseSetUnits tr').empty()
 }
 
@@ -864,15 +831,6 @@ function updateDisplayerFromTile(tile)
 	if (tile == null)
 		return
 
-	$('#tileProperties').append($('<li>').text("Tile"))	
-	$("#tileProperties li:first").css("font-weight", "bold")
-	$("#tileProperties li:first").css("text-decoration", "underline")
-	$('#pieceProperties').append($('<li>').text("Piece"))
-	$("#pieceProperties li:first" ).first().css("font-weight", "bold")
-	$("#pieceProperties li:first").css("text-decoration", "underline")
-	$('#flatPieceProperties').append($('<li>').text("Flat Piece"))
-	$("#flatPieceProperties li:first" ).first().css("font-weight", "bold")
-	$("#flatPieceProperties li:first").css("text-decoration", "underline")
 	for (key of Object.keys(tile))
 	{
 		var propertyStringDisplay = ("" + key + ": " + tile[key])
@@ -882,27 +840,42 @@ function updateDisplayerFromTile(tile)
 
 	if(tile.piece != null)
 	{
+		$('#displayPieceTabButton').click()
 		for (key of Object.keys(tile.piece))
 		{
-			if (key != "boardAvatar" && key != "owner" && key != "canAttack" && key != "canReceiveFreeEnergyAtThisLocation" && key != "currentCol" && key != "currentRow" && key != "isActive" && tile.piece[key] != 0)
+			if (key != 'healthCapacity' && key != 'movementCapacity' && key != "boardAvatar" && key != "owner" && key != "canAttack" && key != "canReceiveFreeEnergyAtThisLocation" && key != "currentCol" && key != "currentRow" && key != "isActive" && tile.piece[key] != 0)
 			{
-				var propertyStringDisplay = ("" + key + ": " + tile.piece[key]) 
-				$('#pieceProperties').append($('<li>').text(propertyStringDisplay))
+				if(key == 'health')
+					var propertyStringDisplay = ("" + key + ":   " + tile.piece[key] + "/" + tile.piece['healthCapacity'])
+				else if(key == 'movement')
+					var propertyStringDisplay = ("" + key + ":   " + tile.piece[key] + "/" + tile.piece['movementCapacity'])
+				else
+					var propertyStringDisplay = ("" + key + ":   " + tile.piece[key]) 
+
+			$('#pieceProperties').append($('<li>').text(propertyStringDisplay))
 			}
 		}
 	}
 
 	if(tile.flatPiece != null)
 	{
+		if(tile.piece == null)
+			$('#displayFlatPieceTabButton').click()
 		for (key of Object.keys(tile.flatPiece))
 		{
 			if (key != "boardAvatar" && key != "owner" && key != "canAttack" && key != "canReceiveFreeEnergyAtThisLocation" && key != "currentCol" && key != "currentRow" && key != "isActive" && tile.flatPiece[key] != 0)
 			{
-				var propertyStringDisplay = ("" + key + ": " + tile.flatPiece[key]) 
+				if(key == 'health')
+					var propertyStringDisplay = ("" + key + ":   " + tile.piece[key] + "/" + tile.piece['healthCapacity'])
+				else					
+					var propertyStringDisplay = ("" + key + ": " + tile.flatPiece[key]) 
 				$('#flatPieceProperties').append($('<li>').text(propertyStringDisplay))
 			}
 		}
 	}
+
+	if (tile.flatPiece == null && tile.piece == null)
+		$('#displayTileTabButton').click()
 }
 
 function updateVictoryPointTokenSupplyDOM(victoryPointTokenSupply, victoryPointTokenDrip)
