@@ -68,7 +68,7 @@ function createNewGame(name, host)
 	{
 		host: host,
 		redPlayer: {socketID: null, turnsTaken: 0, Name: name, gold: 5, victoryPoints: 0, energy: 2},
-		bluePlayer: {socketID: null, turnsTaken: 0, Name: host, gold: 10, victoryPoints: 0, energy: 2},
+		bluePlayer: {socketID: null, turnsTaken: 0, Name: host, gold: 5, victoryPoints: 0, energy: 2},
 		board: board,
 		movementReactions: new Map,
     activationReactions: new Map,

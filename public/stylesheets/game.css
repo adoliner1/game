@@ -21,11 +21,11 @@ td:hover {background-color: #FFFFE0;}
 .energy {position: absolute; left: 32%; top: 0%;}
 .vp {position: absolute; left: 60%; top: 0%;}
 
-#buttons {position: absolute; left: 65%; top: 45%; width: 7%}
-#buttons button {position: relative; padding: 3px; border-radius: 10px;}
+#buttons {position: absolute; left: 65%; top: 40%; width: 15%; height: 10%; padding: 3px;}
+#buttons button {position: relative; padding: 3px; border-radius: 10px; margin: 3px;}
 button:hover {background-color: #F0F8FF;}
 
-#stores {position: absolute; top: 40%; height: 25%; left: 75%; width: 25%;}
+#stores {position: absolute; top: 50%; height: 25%; left: 65%; width: 25%;}
 #baseSet {left: 1%; color: grey;}
 #nonBaseSetBuildings {left: 1%; color: brown;}
 #nonBaseSetUnits {left: 1%; color: purple;}
@@ -39,5 +39,5 @@ button:hover {background-color: #F0F8FF;}
 .tabContent {list-style-type: none; height: 50%; width: 100%; top: 10%; position: absolute;}
 .tabContent li {padding: 5px 10px; width: 100%;}
 
-#log {list-style-type: none; height: 15%; border-top: 1px solid #000000; width: 100%; position: absolute; top: 85%; overflow: scroll;}
+#log {list-style-type: none; height: 50%; border-top: 1px solid #000000; width: 100%; position: absolute; top: 50%; overflow: scroll;}
 #log li { padding: 5px 10px; width: 100%;}

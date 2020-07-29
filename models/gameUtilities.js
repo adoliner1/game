@@ -57,10 +57,18 @@ function convertServerGameToClientGame(game)
   clientGame.bluePlayer = _.cloneDeep(game.bluePlayer)
   clientGame.isRedPlayersTurn = game.isRedPlayersTurn
   clientGame.board = convertServerBoardToClientBoard(game.board)
-  clientGame.baseSet = convertDictionaryToList(game.baseSet).map(getPieceForClientFromGamePiece)
-  clientGame.nonBaseSetBuildings = convertDictionaryToList(game.nonBaseSetBuildings).map(getPieceForClientFromGamePiece)
-  clientGame.nonBaseSetUnits = convertDictionaryToList(game.nonBaseSetUnits).map(getPieceForClientFromGamePiece)
-  clientGame.nonBaseSetSpells = convertDictionaryToList(game.nonBaseSetSpells).map(getPieceForClientFromGamePiece)
+  clientGame.baseSet = convertDictionaryToList(game.baseSet).map(getPieceForClientFromGamePiece).sort(function (a, b) 
+    {
+      return a.cost - b.cost
+    })
+  clientGame.nonBaseSetBuildings = convertDictionaryToList(game.nonBaseSetBuildings).map(getPieceForClientFromGamePiece).sort(function (a, b) 
+    {
+      return a.cost - b.cost
+    })
+  clientGame.nonBaseSetUnits = convertDictionaryToList(game.nonBaseSetUnits).map(getPieceForClientFromGamePiece).sort(function (a, b) 
+    {
+      return a.cost - b.cost
+    })
   return clientGame
 }
 

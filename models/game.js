@@ -425,14 +425,15 @@ function activateSocket(io)
     socket.on('request tiles which can be moved to and the paths there', function(tile)
     {
       var game = gameUtilities.findGameFromSocketID(socket.id)
-      var gameTile = game.board[tile.col][tile.row]
-      var gamePiece = gameTile.piece
 
       if (game == null)
       {
         io.to(socket.id).emit("new log message", "No such game")
         return
       }
+
+      var gameTile = game.board[tile.col][tile.row]
+      var gamePiece = gameTile.piece
 
       var isRedPlayer = gameUtilities.findIfPlayerIsRedPlayerInGameFromSocketID(game, socket.id)
       var player = (isRedPlayer) ? game.redPlayer : game.bluePlayer
@@ -580,68 +581,6 @@ function activateSocket(io)
       io.to(game.host).emit('new game state', gameUtilities.convertServerGameToClientGame(game))     
     })
 
-    socket.on('request pieces which can be purchased', function()
-    {
-      var game = gameUtilities.findGameFromSocketID(socket.id)
-
-      if (game == null)
-      {
-        io.to(socket.id).emit("new log message", "No such game")
-        return
-      }
-
-      var piece = game.baseSet[clientPiece.name]
-
-      // TODO extract finding a piece to a helper
-      if (piece == null) {
-        if (clientPiece.types.includes("Building"))
-          piece = game.nonBaseSetBuildings[clientPiece.name]
-        else if (clientPiece.types.includes("Unit"))
-          piece = game.nonBaseSetUnits[clientPiece.name]
-        else
-          piece = game.nonBaseSetSpells[clientPiece.name]
-      }
-
-      if (piece == null)
-      {
-        io.to(socket.id).emit("new log message", "Piece not in game")
-        return
-      }
-
-      var isRedPlayer = gameUtilities.findIfPlayerIsRedPlayerInGameFromSocketID(game, socket.id)
-      var player = (isRedPlayer) ? game.redPlayer : game.bluePlayer
-
-      if (!gameUtilities.findIfItsAPlayersTurnInGame(isRedPlayer, game))
-      {
-        io.to(socket.id).emit("new log message", "Not your turn")
-        return  
-      }
-
-      if (player.gold < piece.cost)
-      {
-        io.to(socket.id).emit("new log message", "Not enough money")
-        return
-      }
-
-      player.gold = player.gold - piece.cost
-      for (var i = 0; i < player.inventory.length; i++) 
-      {
-          if (player.inventory[i] == undefined)
-          {
-            var newPiece = _.cloneDeep(piece);
-            player.inventory[i] = newPiece
-            if (isRedPlayer)
-              newPiece.owner = "Red"
-            else
-              newPiece.owner = "Blue"
-            break
-          }
-      }
-
-      io.to(game.host).emit("new log message", player.Name + " buys a " + piece.name)
-      io.to(game.host).emit('new game state', gameUtilities.convertServerGameToClientGame(game))
-    })
-
     socket.on('request to end turn', function()
     {
       var game = gameUtilities.findGameFromSocketID(socket.id)
@@ -671,7 +610,6 @@ function activateSocket(io)
           flatPiece.performEndOfTurnEffects(game)
       }
     
-
       //check for dead HQ
       if (game.board[4][1].piece == null || game.board[4][13].piece == null)
       {
