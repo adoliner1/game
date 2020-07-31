@@ -5,12 +5,13 @@ const endOfRedTiles = 3
 const startOfBlueTiles = 12
 const endOfBlueTiles = 15
 const clickSound = new Audio('../sounds/click.wav');
+const yourTurnSound = new Audio('../sounds/yourTurn.mp3');
 
 $(function () 
 {
 	//globals
 	var socket = io()
-	window.allButtons = [($('#castUnitSpellOnFlatPieceButton')), ($('#energizeFlatPieceButton')), ($('#castUnitSpellOnPieceButton')), ($('#castUnitSpellButton')), ($('#buyButton')),($('#buildButton')),($('#moveButton')),($('#energizeButton')),($('#attackButton')),($('#attackPieceButton')),($('#attackFlatPieceButton'))]
+	window.allButtons = [($('#castUnitSpellOnFlatPieceButton')), ($('#energizeFlatPieceButton')), ($('#energizePieceButton')), ($('#castUnitSpellOnPieceButton')), ($('#castUnitSpellButton')) ,($('#buildButton')),($('#moveButton')),($('#energizeButton')),($('#attackButton')),($('#attackPieceButton')),($('#attackFlatPieceButton'))]
 
 	//tiles which can currently be acted on(moved to, attacked, casted on, built on)
 	window.activeTiles = []
@@ -39,18 +40,25 @@ $(function ()
 	socket.on('new log message', function(message)
 	{
 		updateLog(message)
+
+		if(message == "Not enough gold")
+			selectStorePieceToPurchaseMode = false
 	})
 
 	socket.on('new game state', function(newGameState)
 	{
+		
+		var oldTurn = isThisPlayersTurn()				
 		window.game = newGameState
+
+		if(isThisPlayersTurn() && !oldTurn)
+			yourTurnSound.play()
 
 		enableAndDisableEndTurnButtonAsNeeded(game)
 
 		updatePlayerResourcesDOM(true, game.redPlayer)
 		updatePlayerResourcesDOM(false, game.bluePlayer)
 
-		currentlySelectedTile = game.board[currentlySelectedTile.col][currentlySelectedTile.row]
 		if (currentlySelectedTile != null)
 		{
 			//update because there's a new board
@@ -249,8 +257,23 @@ $(function ()
 		resetTilesColorsAndAddHover(tilesWhichAreHighlightedBecauseTheyCanBeEnergized)
 		activeTiles = []
 		currentlySelectedTile = null
+		selectStorePieceToPurchaseMode = false
 		updateDisplayerFromTile(null)
 		updateDisplayerFromShop(null)
+	});
+
+	$(document).keypress(function(e) 
+	{
+  		if(e.key == "m" && $('#moveButton').is(":enabled"))
+  			$('#moveButton').click()
+  		else if(e.key == "b" && $('#buildButton').is(":enabled"))
+  			$('#buildButton').click()
+  		else if(e.key == "e" && $('#energizeButton').is(":enabled"))
+  			$('#energizeButton').click()
+  		else if(e.key == "a" && $('#attackButton').is(":enabled"))
+  			$('#attackButton').click()
+
+
 	});
 
 	//button handlers
@@ -462,7 +485,7 @@ function updateDOMForTile(tile)
 			DOMObject.children(".flatPiece").css("opacity", ".5")
 		if(tile.flatPiece.types.includes("Building"))
 		{
-			DOMObject.children(".flatPiece").css("border", "1px dotted  #404040")
+			DOMObject.children(".flatPiece").css("border", "1px dotted #404040")
 		}
 
 		assignPieceColor(tile.flatPiece.owner, DOMObject.children(".flatPiece"))
@@ -483,7 +506,7 @@ function updateDOMForTile(tile)
 		else
 			DOMObject.children(".piece").css("opacity", ".5")
 		if(tile.piece.types.includes("Building"))
-			DOMObject.children(".piece").css("border", "1px dotted  #404040")
+			DOMObject.children(".piece").css("border", "1px dotted #404040")
 		else
 		{
 			DOMObject.children(".piece").css("font-style", "italic")
@@ -505,9 +528,11 @@ function assignPieceColor(owner, DOMObject)
 {
 	if (owner == "Blue")
 		DOMObject.css('color', 'blue')
-	else
+	else if (owner == "Red")
 		DOMObject.css('color', 'red')
-}
+	else
+		DOMObject.css('color', 'grey')
+}		
 
 function hoverEffectForTileAndPath(tileJQueryObject, isHovering)
 {
@@ -531,7 +556,7 @@ function hoverEffectForTileAndPath(tileJQueryObject, isHovering)
 
 function enableNecessaryActionButtons()
 {
-	if (currentlySelectedTile.piece != null && isThisPlayersTurn() && playerOwnsPiece(isRedPlayer, currentlySelectedTile.piece))
+	if (currentlySelectedTile != null && currentlySelectedTile.piece != null && isThisPlayersTurn() && playerOwnsPiece(isRedPlayer, currentlySelectedTile.piece))
 	{
 		if (currentlySelectedTile.piece.movement > 0 && currentlySelectedTile.piece.isActive)
 		{	
@@ -558,7 +583,7 @@ function enableNecessaryActionButtons()
 			enableAndShowButton($('#energizeButton'))
 		}
 
-		if(currentlySelectedTile.piece.hasUnitSpells && currentlySelectedTile.piece.isActive)
+		if(currentlySelectedTile.piece.hasUnitSpells && currentlySelectedTile.piece.isActive && currentlySelectedTile.piece.hasCastThisTurn != true)
 		{
 			window.tilePieceIsPotentiallyCastingSpellFrom = currentlySelectedTile
 			enableAndShowButton($('#castUnitSpellButton'))
@@ -879,7 +904,7 @@ function updateDisplayerFromTile(tile)
 			if (key != "boardAvatar" && key != "owner" && key != "canAttack" && key != "canReceiveFreeEnergyAtThisLocation" && key != "currentCol" && key != "currentRow" && key != "isActive" && tile.flatPiece[key] != 0)
 			{
 				if(key == 'health')
-					var propertyStringDisplay = ("<b>" + key + "</b>:   " + tile.piece[key] + "/" + tile.piece['healthCapacity'])
+					var propertyStringDisplay = ("<b>" + key + "</b>:   " + tile.flatPiece[key] + "/" + tile.flatPiece['healthCapacity'])
 				else					
 					var propertyStringDisplay = ("<b>" + key + "</b>: " + tile.flatPiece[key]) 
 				$('#flatPieceProperties').append($('<li>').html(propertyStringDisplay))

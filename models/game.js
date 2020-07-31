@@ -26,60 +26,6 @@ function activateSocket(io)
       }
     })
 
-    socket.on('request to cast a spell', function(inventoryPosition, targetTile, targetID)
-    {
-      var game = gameUtilities.findGameFromSocketID(socket.id)
-
-      if (game == null)
-      {
-        io.to(socket.id).emit("new log message", "No such game")
-        return
-      }
-
-      var isRedPlayer = gameUtilities.findIfPlayerIsRedPlayerInGameFromSocketID(game, socket.id)
-      var player = (isRedPlayer) ? game.redPlayer : game.bluePlayer
-      var spell = player.inventory[inventoryPosition]
-
-      if (spell == null)
-      {
-        io.to(socket.id).emit("new log message", "No spell to cast")
-        return      
-      }  
-
-      if (targetID == "Tile")
-        var target = game.board[targetTile.col][targetTile.row]
-      else if(targetID == "Flat Piece")
-        var target = game.board[targetTile.col][targetTile.row].flatPiece
-      else if(targetID == "Piece")
-        var target = game.board[targetTile.col][targetTile.row].piece 
-
-      if (!gameUtilities.findIfItsAPlayersTurnInGame(isRedPlayer, game))
-      {
-        io.to(socket.id).emit("new log message", "Not your turn")
-        return  
-      }
-
-      var tilesWhichCanBeCastOn = spell.getTilesWhichCanBeCastOn(game)
-
-      if(!tilesWhichCanBeCastOn.includes(game.board[targetTile.col][targetTile.row]))
-      {
-        io.to(socket.id).emit("new log message", "Can't cast there")
-        return        
-      }
-
-      spell.cast(game, target)
-      player.inventory[inventoryPosition] = null
-
-      if (targetID == "Tile")
-        io.to(game.host).emit("new log message", player.Name + " casts " + spell.name + " on the tile: col: " + targetTile.col + " row: " + targetTile.row)
-      else if(targetID == "Flat Piece")
-        io.to(game.host).emit("new log message", player.Name + " casts " + spell.name + " on the flat piece at: col: " + targetTile.col + " row: " + targetTile.row)
-      else
-        io.to(game.host).emit("new log message", player.Name + " casts " + spell.name + " on the piece at: col: " + targetTile.col + " row: " + targetTile.row)
-
-      io.to(game.host).emit('new game state', gameUtilities.convertServerGameToClientGame(game))
-    })
-
     socket.on('request to cast a unit spell', function(casterTile, targetTile, targetID)
     {
       var game = gameUtilities.findGameFromSocketID(socket.id)
@@ -418,7 +364,7 @@ function activateSocket(io)
       if ("performOnBuildEffects" in gamePiece)
         gamePiece.performOnBuildEffects(game)
 
-      io.to(game.host).emit("new log message", player.Name + " builds a(n) " + gamePiece.name + " on col: " + gameTileToBuildOn.col + " row: " + gameTileToBuildOn.row)
+      io.to(game.host).emit("new log message", player.Name + " builds " + gamePiece.name + " on col: " + gameTileToBuildOn.col + " row: " + gameTileToBuildOn.row)
       io.to(game.host).emit('new game state', gameUtilities.convertServerGameToClientGame(game))
     })
 
@@ -525,7 +471,7 @@ function activateSocket(io)
 
       io.to(game.host).emit("new log message", player.Name + "'s " + movingPiece.name + " moves from col: " + fromTile.col + " row: " + fromTile.row + " to col: " + toTile.col + " row: " + toTile.row)
       movingPiece.move(game, moveableTilesAndThePathThere.get(toTile))
-      io.to(game.host).emit('new game state', gameUtilities.convertServerGameToClientGame(game))   
+      io.to(game.host).emit('new game state', gameUtilities.convertServerGameToClientGame(game))
     })
 
     socket.on('request to energize a piece', function(tileToEnergizePieceOn, isFlatPiece)

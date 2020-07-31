@@ -48,7 +48,7 @@ function createNewGame(name, host)
 		tile.piece = _.cloneDeep(pieces.baseSet['Builder Drone'])
 		tile.piece.isActive = true
 		tile.piece.movement = 2
-		tile.piece.energy = 1
+    tile.piece.canReceiveFreeEnergyAtThisLocation = true
 		tile.piece.currentCol = tile.col
 		tile.piece.currentRow = tile.row
 
@@ -56,24 +56,24 @@ function createNewGame(name, host)
 		  tile.piece.owner = "Blue"
 		else
 		  tile.piece.owner = "Red"
-	}  
+	}
 
 	//create a new base set remove the HQ and Blight
-	var newBaseSet = _.cloneDeep(pieces.baseSet)
-	delete newBaseSet['Headquarters']
-  delete newBaseSet['Blight']
+	var buyablePiecesInBaseSet = _.cloneDeep(pieces.baseSet)
+	delete buyablePiecesInBaseSet['Headquarters']
+  delete buyablePiecesInBaseSet['Blight']
 
 	//create game object
 	var newGame =   
 	{
 		host: host,
 		redPlayer: {socketID: null, turnsTaken: 0, Name: name, gold: 5, victoryPoints: 0, energy: 2},
-		bluePlayer: {socketID: null, turnsTaken: 0, Name: host, gold: 5, victoryPoints: 0, energy: 2},
+		bluePlayer: {socketID: null, turnsTaken: 0, Name: host, gold: 3, victoryPoints: 0, energy: 0},
 		board: board,
 		movementReactions: new Map,
     activationReactions: new Map,
     deathReactions: new Map,
-		baseSet: newBaseSet,
+		baseSet: buyablePiecesInBaseSet,
 		nonBaseSetBuildings: selectRandomNonBaseSet(pieces.nonBaseSetBuildings),
 		nonBaseSetUnits: selectRandomNonBaseSet(pieces.nonBaseSetUnits),
 		victoryPointTokenSupply: 100,

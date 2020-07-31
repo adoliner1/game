@@ -43,7 +43,7 @@ function getTilesWithMoreThanZeroStrength(tiles)
   var newTiles = []
   for (var tile of tiles)
   {
-    if (tile.piece != null && tile.strength > 0)
+    if (tile.piece != null && tile.piece.strength > 0)
       newTiles.push(tile)
   }
   return newTiles  
@@ -290,20 +290,6 @@ function getTilesWithPiecesWithMovementCapacityHigherThanZero(tiles)
   return newTiles
 }
 
-function getTilesWithAPieceOrAFlatPieceOrNonPlatformFlatPiece(tiles)
-{
-  var newTiles = []
-  for (tile of tiles)
-    if(isAttackableTile(tile))
-      newTiles.push(tile)
-  return newTiles
-}
-
-function isAttackableTile(tile)
-{
-  return (tile.piece != null || (tile.flatPiece != null && !tile.flatPiece.types.includes("Platform")))
-}
-
 function getTilesWithActiveFriendlyBuilders(tiles, isRedPlayer)
 {
   var newTiles = []
@@ -313,15 +299,14 @@ function getTilesWithActiveFriendlyBuilders(tiles, isRedPlayer)
   return newTiles
 }
 
-function getTilesWherePiecesDontHaveFullEnergy(tiles)
+function getTilesWithAnActivePiece(tiles)
 {
   var newTiles = []
   for (tile of tiles)
-    if ((tile.piece != null && tile.piece.energy < tile.piece.energyCapacity) || (tile.flatPiece != null && tile.flatPiece.energy < tile.flatPiece.energyCapacity))
+    if ((tile.piece != null && tile.piece.isActive) || (tile.flatPiece != null && tile.flatPiece.isActive))
       newTiles.push(tile)
-  return newTiles   
+  return newTiles     
 }
-
 
 function getTilesWithoutAFlatPieceAndWithoutAPiece(tiles)
 {
@@ -360,6 +345,15 @@ function getTilesWithoutAPiece(tiles)
   var newTiles = []
   for (tile of tiles)
     if (tile.piece == null)
+      newTiles.push(tile)
+  return newTiles 
+}
+
+function getTilesWithoutAFlatPiece(tiles)
+{
+  var newTiles = []
+  for (tile of tiles)
+    if (tile.flatPiece == null)
       newTiles.push(tile)
   return newTiles 
 }
@@ -434,6 +428,7 @@ function removeValueFromArray(arr)
 }
 
 module.exports = {
+  getTilesWithAnActivePiece,
   updatePiecesWhichCanReceiveFreeEnergy,
   tileIsInRangeOfFriendlyConduit,
   getTilesInRangeOfAFriendlyActiveCaster,
@@ -455,12 +450,10 @@ module.exports = {
   playerOwnsPiece,
   getTilesNextToFriendlyActiveBuilders,
   getTilesWithPiecesWithMovementCapacityHigherThanZero,
-  getTilesWithAPieceOrAFlatPieceOrNonPlatformFlatPiece,
-  isAttackableTile,
   getTilesWithActiveFriendlyBuilders,
-  getTilesWherePiecesDontHaveFullEnergy,
   getTilesWithoutAFlatPieceAndWithoutAPiece,
   getTilesWithAPieceOrAFlatPiece,
+  getTilesWithoutAFlatPiece,
   getTilesWithinRangeOfTile,
   getDistanceBetweenTwoTiles,
   getTilesWithoutAPiece,
