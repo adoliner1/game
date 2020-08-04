@@ -31,11 +31,16 @@ class Piece
     this.currentCol = null
     this.currentRow = null
     this.owner = null
-    this.minimumEnergyNeededForActivation = 1
   }
 
   activate(game)
   {
+    if (this.isActive)
+    {
+      this.movement = this.movementCapacity
+      return
+    }
+
     var pieceTile = this.getCurrentTile(game)
     if(game.activationReactions.has(pieceTile))
       for (var piece of game.activationReactions.get(pieceTile))
@@ -61,7 +66,7 @@ class Piece
 
   receiveEnergy(game, amountOfEnergy)
   {
-    if (this.storedEnergy == undefined && !this.isActive)
+    if (this.storedEnergy == undefined)
       this.activate(game)
     else
       this.storedEnergy += amountOfEnergy
@@ -70,8 +75,8 @@ class Piece
   getAttackableTiles(game)
   {
     var pieceTile = this.getCurrentTile(game)
-    var attackableTiles = utils.getTilesWithAPieceOrAFlatPieceOrNonPlatformFlatPiece(utils.getTilesWithinRangeOfTile(game.getAllTilesInListForm(), pieceTile, this.attackRange))
-    attackableTiles = utils.removeValueFromArray(attackableTiles, pieceTile) 
+    var attackableTiles = utils.getTilesWithAPieceOrAFlatPiece(utils.getTilesWithinRangeOfTile(game.getAllTilesInListForm(), pieceTile, this.attackRange))
+    utils.removeValueFromList(attackableTiles, pieceTile) 
     return attackableTiles
   }
 
@@ -105,7 +110,7 @@ class Piece
         for (var piece of game.movementReactions.get(path[leadIndex]))
         {
           if (piece.react(game, this, movedFromTile) == "stop movement")
-            movement = 0
+            piece.movement = 0
         }
       }
 
@@ -225,11 +230,11 @@ class Piece
 
     if ("addReactionsWhenBuilt" in this)
       for (var [reactionTile, reactionsList] of game.movementReactions) 
-        utils.removeValueFromArray(reactionsList, this)
+        utils.removeValueFromList(reactionsList, this)
       for (var [reactionTile, reactionsList] of game.activationReactions) 
-        utils.removeValueFromArray(reactionsList, this)
+        utils.removeValueFromList(reactionsList, this)
       for (var [reactionTile, reactionsList] of game.deathReactions)
-        utils.removeValueFromArray(reactionsList, this)      
+        utils.removeValueFromList(reactionsList, this)      
 
     if (this.isFlat)
       pieceTile.flatPiece = null
@@ -244,7 +249,7 @@ class Turret extends Piece
   constructor()
   {
     super("Turret", "Building which shoots", "TU", ["Building"], 4, 0, 0, 3, 0, false, false)
-    this.unitSpellDescription = "Can only be cast once per turn. Deal 1 damage to a Piece within casting range. This remains active afterwards."
+    this.unitSpellDescription = "Once per turn, deal 1 damage to a Piece within casting range. This remains active afterwards."
     this.castingRange = 2
     this.hasUnitSpells = true
     this.spellTarget = "Piece"
@@ -282,7 +287,7 @@ class SpeedDome extends Piece
 {
   constructor()
   {
-    super("Speed Dome", "When this is activated, restore the movement of all friendly units within 3 tiles. Deactivate this.", "SD", ["Building"], 3, 0, 0, 3, 0, false, false)
+    super("Speed Dome", "When this is activated, restore the movement of all friendly units within 4 tiles. Deactivate this.", "SD", ["Building"], 3, 0, 0, 3, 0, false, false)
   }
 
   activate(game)
@@ -290,7 +295,8 @@ class SpeedDome extends Piece
     super.activate(game)
     if(this.isActive)
     {
-      tilesWithPieces = utils.getTilesWithAFriendlyPieceOrAFriendlyFlatPiece(isRedPlayer, utils.getTilesWithAPieceOrAFlatPiece(utils.getTilesWithinRangeOfTile(game.getAllTilesInListForm(), pieceTile, 3)))
+      var isRedPlayer = this.owner == "Red" ? true : false       
+      tilesWithPieces = utils.getTilesWithAFriendlyPieceOrAFriendlyFlatPiece(isRedPlayer, utils.getTilesWithAPieceOrAFlatPiece(utils.getTilesWithinRangeOfTile(game.getAllTilesInListForm(), pieceTile, 4)))
       for (tile of tilesWithPieces)
         tile.piece.movement = tile.piece.movementCapacity
     }
@@ -353,12 +359,12 @@ class FieldShocker extends Piece
     var pieceTile = this.getCurrentTile(game)
     var tilesToReactTo = utils.getTilesWithinRangeOfTile(game.getAllTilesInListForm(), pieceTile, 3)
 
-    for (tiles of tilesToReactTo)
+    for (var tile of tilesToReactTo)
     {
-      if (game.activationReactions.has(pieceTile))
-        game.activationReactions.get(pieceTile).push(this)
+      if (game.activationReactions.has(tile))
+        game.activationReactions.get(tile).push(this)
       else
-        game.activationReactions.set(pieceTile, [this])  
+        game.activationReactions.set(tile, [this])  
     }
   }
 }
@@ -565,7 +571,7 @@ class SpikeTrap extends Piece
     var pieceTile = this.getCurrentTile(game)
     var tilesToReactTo = utils.getAdjacentTiles(game.board, pieceTile)
 
-    for (tile of tilesToReactTo)
+    for (var tile of tilesToReactTo)
     {
       if (game.movementReactions.has(tile)) 
         game.movementReactions.get(tile).push(this)
@@ -583,10 +589,10 @@ class JuiceShaman extends Piece
 {
   constructor()
   {
-    super("Juice Shaman", "Juices up your units", "JS", ["Unit"], 4, 1, 2, 1, 1, false, true)
-    this.castingRange = 2
+    super("Juice Shaman", "Juices up your units", "JS", ["Unit"], 4, 0, 1, 1, 0, false, false)
+    this.castingRange = 1
     this.hasUnitSpells = true
-    this.unitSpellDescription = "Increase the strength of a piece that already has strength by 2"
+    this.unitSpellDescription = "Target must be a piece whose strength is greater than 0. Increase its strength by 1."
     this.spellTarget = "Piece"
 
   }
@@ -630,8 +636,8 @@ class DrainerWizard extends Piece
     if (targetPiece.isActive)
     {
       targetPiece.deactivate(game)
-      if(victim.storedEnergy != undefined && victim.storedEnergy > 0)
-        victim.storedEnergy -= 1
+      if(targetPiece.storedEnergy != undefined && victim.storedEnergy > 0)
+        targetPiece.storedEnergy -= 1
 
       if(this.owner == "Red")
         game.redPlayer.energy += energyToProduce
@@ -693,7 +699,7 @@ class Archer extends Piece
   {
     var pieceTile = this.getCurrentTile(game)
     var attackableTiles = utils.getTilesWithAPieceOrAFlatPiece(utils.getAttackableTilesThatDontGoThroughAnotherUnit(game.board, pieceTile))
-    attackableTiles = utils.removeValueFromArray(attackableTiles, pieceTile) 
+    utils.removeValueFromList(attackableTiles, pieceTile) 
     return attackableTiles
   }
 }
@@ -737,7 +743,7 @@ class Scrapper extends Piece
     var victimOldHealth = victim.health
     victim.takeDamage(game, this, this.strength)
     if (victimOldHealth < victim.health)
-      player.gold ++
+      player.gold += 1 
     if (victim == null || victim.health <= 0)
       player.gold += 3
     if (victim.health > 0)
@@ -792,8 +798,7 @@ class MammaJamma extends Piece
 {
   constructor()
   {
-    super("MammaJamma", "This piece costs 2 energy to activate", "MJ", ["Unit"], 6, 6, 1, 10, 1, false, true)
-    this.minimumEnergyNeededForActivation = 2
+    super("MammaJamma", "Mamma jamma", "MJ", ["Unit"], 7, 6, 1, 10, 1, false, true)
   }
 }
 
@@ -873,7 +878,7 @@ class AttackDrone extends Piece
 {
   constructor()
   {
-    super("Attack Drone", "", "AD", ["Unit"], 1, 1, 2, 1, 1, false, true)
+    super("Attack Drone", "", "AD", ["Unit"], 3, 1, 2, 1, 1, false, true)
   }
 }
 
@@ -906,7 +911,7 @@ class Drainer extends Piece
 {
   constructor()
   {
-    super("Drainer", "After this unit attacks, deactivate its victim. If the piece stores energy, reduce it by 1", "DR", ["Unit"], 5, 1, 3, 1, 1, false, true)
+    super("Drainer", "After this attacks, deactivate its victim. If the piece stores energy, reduce it by 1", "DR", ["Unit"], 5, 1, 3, 1, 1, false, true)
   }
 
   attack(game, victim)
@@ -967,7 +972,7 @@ class PowerPriest extends Piece
   {
     var pieceTile = this.getCurrentTile(game)
     var isRedPlayer = this.owner == "Red" ? true : false 
-    return utils.getTilesWithAFriendlyPieceOrAFriendlyFlatPiece(isRedPlayer, getAdjacentTiles(game.board, pieceTile))
+    return utils.getTilesWithAFriendlyPieceOrAFriendlyFlatPiece(isRedPlayer, utils.getAdjacentTiles(game.board, pieceTile))
   }
 
   activate(game)
@@ -1108,11 +1113,18 @@ class Headquarters extends Piece
 {
   constructor()
   {
-    super("Headquarters", "If this dies, the owner loses the game. Receive 2 energy and 5 gold at start of your turn.", "HQ", ["Building", "Conduit"], 7, 0, 0, 10, 0, false, false)
-    this.minimumEnergyNeededForActivation = 0
+    super("Headquarters", "If this dies, the owner loses the game. Receive 2 energy and 5 gold at start of your turn.", "HQ", ["Building", "Conduit", "Builder"], 7, 0, 0, 10, 0, false, false)
     this.goldProduction = 5
     this.energyDistributionRange = 4
     this.castingRange = 4
+  }
+
+  buildableTiles(game, pieceToBuild)
+  {
+    if(pieceToBuild.isFlat)
+      return utils.getTilesWithoutAFlatPiece(utils.getAdjacentTiles(game.board, this.getCurrentTile(game)))
+    else
+      return utils.getTilesWithoutAPiece(utils.getAdjacentTiles(game.board, this.getCurrentTile(game)))
   }
 
   performStartOfTurnEffects(game)
@@ -1142,14 +1154,15 @@ class EnergyTower extends Piece
   {
     super("Energy Tower", "Allows you to distribute energy within 3 tiles of this.", "ET", ["Building", "Conduit"], 5, 0, 0, 4, 0, false, false)
     this.energyDistributionRange = 3
-    this.minimumEnergyNeededForActivation = 0
   }
 
   activate(game)
   {
     super.activate(game)
-    if (this.isActive)
+    if(this.isActive)
+    {
       utils.updatePiecesWhichCanReceiveFreeEnergy(game)
+    }
   }
 
   deactivate(game)
@@ -1180,9 +1193,9 @@ class PulseStick extends Piece
       for (var tile of utils.getAdjacentTiles(game.board, pieceTile))
       {
           if (tile.piece != null && tile.piece.types.includes("Unit"))
-            tile.piece.increaseEnergy(game)
+            tile.piece.receiveEnergy(game, 1)
           else if (tile.flatPiece != null && tile.flatPiece.types.includes("Unit"))
-            tile.flatPiece.increaseEnergy(game)
+            tile.flatPiece.receiveEnergy(game, 1)
       }
     }
   }
@@ -1208,12 +1221,11 @@ class CrossEnergizer extends Piece
       for (var tile of utils.getAdjacentTiles(game.board, pieceTile))
       {
           if (tile.piece != null)
-            tile.piece.increaseEnergy(game)
+            tile.piece.receiveEnergy(game, 1)
           else if (tile.flatPiece != null)
-            tile.flatPiece.increaseEnergy(game)
+            tile.flatPiece.receiveEnergy(game, 1)
       }
     }
-
     this.deactivate(game)
   }
 }
@@ -1278,31 +1290,28 @@ class GoldProducer extends Piece
 {
   constructor()
   {
-    super("Gold Producer", "When activated, produces 1 gold plus whatever gold bonus is on this piece's tile. Deactivate this.", "GP", ["Building"], 4, 0, 0, 3, 0, false, false)
+    super("Gold Producer", "At the start of your turn, produces 1 gold plus whatever gold bonus is on this piece's tile.", "GP", ["Building"], 4, 0, 0, 3, 0, false, false)
   }
 
-  activate(game)
+  performStartOfTurnEffects(game)
   {
-    super.activate(game)
-    if(!this.isActive)
-      return
+    if(this.isActive)
+    {
+      var pieceTile = this.getCurrentTile(game)
+      if (pieceTile.resource == "Gold: 1")
+        var bonus = 1
+      else if (pieceTile.resource == ("Gold: 2"))
+        var bonus = 2
+      else if (pieceTile.resource == ("Gold: 3"))
+        var bonus = 3
+      else
+        var bonus = 0
 
-    var pieceTile = this.getCurrentTile(game)
-    if (pieceTile.resource == "Gold: 1")
-      var bonus = 1
-    else if (pieceTile.resource == ("Gold: 2"))
-      var bonus = 2
-    else if (pieceTile.resource == ("Gold: 3"))
-      var bonus = 3
-    else
-      var bonus = 0
-
-    if(this.owner == "Red")
-      game.redPlayer.gold += 1 + bonus
-    else
-      game.bluePlayer.gold += 1 + bonus
-
-    this.deactivate(game)
+      if(this.owner == "Red")
+        game.redPlayer.gold += 1 + bonus
+      else
+        game.bluePlayer.gold += 1 + bonus
+    }
   }
 }
 
@@ -1314,13 +1323,16 @@ class WindPoweredGoldProducer extends Piece
 {
   constructor()
   {
-    super("Wind Powered Gold Producer", "When a Piece moves on to a tile adjacent to this, produce 1 gold plus whatever gold bonus is on this piece's tile.", "WG", ["Building"], 4, 0, 0, 3, 0, false, false)
+    super("Wind Powered Gold Producer", "When a Piece moves on to a tile adjacent to this, produce 1 gold plus whatever gold bonus is on this piece's tile. Cannot be triggered by the same Unit twice in one turn", "WG", ["Building"], 4, 0, 0, 3, 0, false, false)
+    this.piecesThatHaveTriggeredThisTurn = []
   }
 
   react(game, pieceThatTriggeredReaction, tilePieceMovedFrom)
   {
-    if(this.isActive)
+
+    if(this.isActive && !this.piecesThatHaveTriggeredThisTurn.includes(pieceThatTriggeredReaction))
     {
+      this.piecesThatHaveTriggeredThisTurn.push(pieceThatTriggeredReaction)
       var pieceTile = this.getCurrentTile(game)
       if (pieceTile.resource == "Gold: 1")
         var bonus = 1
@@ -1343,13 +1355,18 @@ class WindPoweredGoldProducer extends Piece
     var pieceTile = this.getCurrentTile(game)
     var tilesToReactTo = utils.getAdjacentTiles(game.board, pieceTile)
 
-    for (tile of tilesToReactTo)
+    for (var tile of tilesToReactTo)
     {
       if (game.movementReactions.has(tile)) 
         game.movementReactions.get(tile).push(this)
       else
         game.movementReactions.set(tile, [this])
     }
+  }
+
+  performStartOfTurnEffects(game)
+  {
+    this.piecesThatHaveTriggeredThisTurn = []  
   }
 }
 
@@ -1358,7 +1375,7 @@ nonBaseSet[windPoweredGoldProducer.name] = windPoweredGoldProducer
 nonBaseSetBuildings[windPoweredGoldProducer.name] = windPoweredGoldProducer
 
 //name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movement, health, attackRange, isFlat, canAttack
-
+ 
 class EnergyAbsorber extends Piece
 {
   constructor()
@@ -1400,7 +1417,7 @@ class EnergyAbsorber extends Piece
     var pieceTile = this.getCurrentTile(game)
     var tilesToReactTo =  utils.getTilesWithAPieceOrAFlatPiece(utils.getTilesWithinRangeOfTile(game.getAllTilesInListForm(), pieceTile, 3))
 
-    for (tile of tilesToReactTo)
+    for (var tile of tilesToReactTo)
     {
       if (game.activationReactions.has(tile)) 
         game.activationReactions.get(tile).push(this)
@@ -1473,7 +1490,7 @@ class Cable extends Piece
 {
   constructor()
   {
-    super("Cable", "When a Piece adjacent to this is activated, energize the Pieces on the other side (if they exist)", "CA", ["Building"], 3, 0, 0, 1, 0, false, false)
+    super("Cable", "When a Piece adjacent to this is activated, energize the Piece and Flat Piece on the other side (if they exist)", "CA", ["Building"], 3, 0, 0, 1, 0, false, false)
   }
 
   react(game, pieceThatTriggeredReaction)
@@ -1482,21 +1499,22 @@ class Cable extends Piece
     var pieceTile = this.getCurrentTile(game)
 
     var adjacentTiles = utils.getAdjacentTiles(game.board, pieceTile)
-
-    adjacentTiles = utils.removeValueFromArray(adjacentTiles, pieceTile)
-
-    console.log(adjacentTiles)
-
     var acrossTile = null
     for (tile of adjacentTiles)
-      if (tile.col == pieceTile.col || tile.row == pieceTile.row)
+      if ((tile.col == pieceThatTriggeredReactionTile.col && tile.row != pieceThatTriggeredReactionTile.row) || (tile.row == pieceThatTriggeredReactionTile.row && tile.col != pieceThatTriggeredReactionTile.col))
         acrossTile = tile
 
     if (acrossTile != null)
-      if (acrossTile.piece != null)
+      if (acrossTile.piece != null && !acrossTile.piece.isActive)
         acrossTile.piece.receiveEnergy(game, 1)
-      if (acrossTile.flatPiece != null)
+      if (acrossTile.piece != null && acrossTile.piece.isActive && acrossTile.piece.storedEnergy != undefined)
+        acrossTile.piece.storedEnergy.receiveEnergy(game, 1)
+
+      if (acrossTile.flatPiece != null && !acrossTile.piece.isActive)
         acrossTile.flatPiece.receiveEnergy(game, 1)
+      if (acrossTile.flatPiece != null && acrossTile.flatPiece.isActive && acrossTile.flatPiece.storedEnergy != undefined)
+        acrossTile.flatPiece.storedEnergy.receiveEnergy(game, 1)
+
   }
 
   addReactionsWhenBuilt(game)
@@ -1504,7 +1522,7 @@ class Cable extends Piece
     var pieceTile = this.getCurrentTile(game)
     var tilesToReactTo =  utils.getAdjacentTiles(game.board, pieceTile)
 
-    for (tile of tilesToReactTo)
+    for (var tile of tilesToReactTo)
     {
       if (game.activationReactions.has(tile)) 
         game.activationReactions.get(tile).push(this)
@@ -1632,7 +1650,7 @@ class Generator extends Piece
 {
   constructor()
   {
-    super("Generator", "at the start of your turn, produces energy equal to the energy resource bonus on this piece's tile. ", "GT", ["Building"], 5, 0, 0, 3, 0, false, false)
+    super("Generator", "At the start of your turn, produces energy equal to the energy resource bonus on this piece's tile. ", "GT", ["Building"], 5, 0, 0, 3, 0, false, false)
   }
 
   performStartOfTurnEffects(game)
@@ -1666,7 +1684,6 @@ class Blight extends Piece
   constructor()
   {
     super("Blight", "-1 victory point", "BL", ["Building", "Blight"], 0, 0, 0, 0, 1, 0, true, false)
-    this.minimumEnergyNeededForActivation = 0
     this.victoryPointValue = -1
   }
 }

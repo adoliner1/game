@@ -22,8 +22,10 @@ $(function ()
 	window.currentlySelectedTile = null
 	window.currentlySelectedStorePiece = null
 	window.tilePieceIsPotentiallyBuildingFrom = null
+	window.piecePotentiallyBeingBuilt = null
 
 	//modes are control flow variables
+	window.undoRequested = false
 	window.buildMode = false
 	window.moveMode = false
 	window.unitCastMode = false
@@ -47,10 +49,10 @@ $(function ()
 
 	socket.on('new game state', function(newGameState)
 	{
-		
 		var oldTurn = isThisPlayersTurn()				
 		window.game = newGameState
 
+		console.log(window.game)
 		if(isThisPlayersTurn() && !oldTurn)
 			yourTurnSound.play()
 
@@ -144,10 +146,14 @@ $(function ()
 	socket.on('new active tiles', function(tiles)
 	{
 		activeTiles = getClientTilesFromServertiles(tiles)
-		if (selectStorePieceToPurchaseMode)
-			buildMode = true
-		selectStorePieceToPurchaseMode = false	
 		highlightTilesGreenAndAddHover(activeTiles)
+		if (selectStorePieceToPurchaseMode)
+		{
+			buildMode = true
+			if (piecePotentiallyBeingBuilt.name == "Gold Hut" || piecePotentiallyBeingBuilt.name == "Power Hut")
+				highlightCenterTilesForHuts(activeTiles)
+		}
+		selectStorePieceToPurchaseMode = false	
 	})
 
 	//store click handler
@@ -174,7 +180,7 @@ $(function ()
 
 			if (selectStorePieceToPurchaseMode)
 			{
-				window.piecePotentiallyBeingBuilt = currentlySelectedStorePiece
+				piecePotentiallyBeingBuilt = currentlySelectedStorePiece
 				socket.emit('request tiles which can be built on', piecePotentiallyBeingBuilt, tilePieceIsPotentiallyBuildingFrom)
 			}
 		})
@@ -272,11 +278,24 @@ $(function ()
   			$('#energizeButton').click()
   		else if(e.key == "a" && $('#attackButton').is(":enabled"))
   			$('#attackButton').click()
+  		else if(e.key == "t" && $('#endTurnButton').is(":enabled"))
+  			$('#endTurnButton').click()
+  		else if(e.key == "c" && $('#castUnitSpellButton').is(":enabled"))
+  			$('#castUnitSpellButton').click()
 
 
 	});
 
 	//button handlers
+	$('#requestUndoButton').click(function(e)
+	{
+		clickSound.play()
+		disableAllButtons()
+		e.preventDefault()
+		e.stopPropagation()
+		socket.emit('undo')
+	})
+
 	$('#energizeButton').click(function(e)
 	{
 		clickSound.play()
@@ -577,7 +596,7 @@ function enableNecessaryActionButtons()
 		}
 
 		var playerEnergy = (window.isRedPlayer) ? (game.redPlayer.energy) : (game.bluePlayer.energy)
-		if (!currentlySelectedTile.piece.isActive && playerEnergy > 0 && currentlySelectedTile.piece.canReceiveFreeEnergyAtThisLocation)
+		if (playerEnergy > 0 && currentlySelectedTile.piece.canReceiveFreeEnergyAtThisLocation)
 		{
 			window.piecePotentiallyBeingEnergized = currentlySelectedTile.piece
 			enableAndShowButton($('#energizeButton'))
@@ -591,7 +610,7 @@ function enableNecessaryActionButtons()
 	}
 
 	var playerEnergy = (window.isRedPlayer) ? (game.redPlayer.energy) : (game.bluePlayer.energy)
-	if (currentlySelectedTile.flatPiece != null && isThisPlayersTurn() && playerOwnsPiece(isRedPlayer, currentlySelectedTile.flatPiece) && !currentlySelectedTile.flatPiece.isActive && playerEnergy > 0 && currentlySelectedTile.flatPiece.canReceiveFreeEnergyAtThisLocation)
+	if (currentlySelectedTile!= null && currentlySelectedTile.flatPiece != null && isThisPlayersTurn() && playerOwnsPiece(isRedPlayer, currentlySelectedTile.flatPiece) && !currentlySelectedTile.flatPiece.isActive && playerEnergy > 0 && currentlySelectedTile.flatPiece.canReceiveFreeEnergyAtThisLocation)
 	{
 		window.flatPiecePotentiallyBeingEnergized = currentlySelectedTile.flatPiece
 		enableAndShowButton($('#energizeFlatPieceButton'))
@@ -626,7 +645,7 @@ function addResourcesToDisplay(board)
 
 function highlightTilesGreenAndAddHover(tiles)
 {
-	for (tile of tiles)
+	for (var tile of tiles)
 	{
 		var DOMObject = getDOMForTile(tile)
 		DOMObject.css('background-color', '#99e699')
@@ -641,6 +660,29 @@ function highlightTilesGreenAndAddHover(tiles)
 				$(this).css("background-color", "#99e699")
 			}
 		)
+	}
+}
+
+function highlightCenterTilesForHuts(tiles)
+{
+	for (var tile of tiles)
+	{
+		if (tile.row == 6 || tile.row == 7 || tile.row == 8)
+		{
+			var DOMObject = getDOMForTile(tile)
+			DOMObject.css('background-color', '#339966')
+			DOMObject.hover
+			(
+				function()
+				{
+					$(this).css("background-color", "#FFFFE0")
+				},
+				function() 
+				{
+					$(this).css("background-color", "#339966")
+				}
+			)
+		}
 	}
 }
 
@@ -841,9 +883,15 @@ function clearDisplayerLists()
 function enableAndDisableEndTurnButtonAsNeeded(game)
 {
 	if (isThisPlayersTurn())
+	{
 		enableAndShowButton($("#endTurnButton"))
+		enableAndShowButton($('#requestUndoButton'))
+	}
 	else
+	{
 		disableAndHideButton($("#endTurnButton"))
+		disableAndHideButton($('#requestUndoButton'))
+	}
 }
 
 function updateDisplayerFromShop(piece)
@@ -901,7 +949,7 @@ function updateDisplayerFromTile(tile)
 			$('#displayFlatPieceTabButton').click()
 		for (key of Object.keys(tile.flatPiece))
 		{
-			if (key != "boardAvatar" && key != "owner" && key != "canAttack" && key != "canReceiveFreeEnergyAtThisLocation" && key != "currentCol" && key != "currentRow" && key != "isActive" && tile.flatPiece[key] != 0)
+			if (key != 'healthCapacity' && key != "boardAvatar" && key != "owner" && key != "canAttack" && key != "canReceiveFreeEnergyAtThisLocation" && key != "currentCol" && key != "currentRow" && key != "isActive" && tile.flatPiece[key] != 0)
 			{
 				if(key == 'health')
 					var propertyStringDisplay = ("<b>" + key + "</b>:   " + tile.flatPiece[key] + "/" + tile.flatPiece['healthCapacity'])

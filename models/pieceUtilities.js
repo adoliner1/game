@@ -6,7 +6,7 @@ function updatePiecesWhichCanReceiveFreeEnergy(game)
   for (var tile of game.getAllTilesInListForm())
   {
     if(tile.piece != null)
-      tile.piece.canReceiveFreeEnergyAtThisLocation = tile.piece.canReceiveFreeEnergy(game)          
+      tile.piece.canReceiveFreeEnergyAtThisLocation = tile.piece.canReceiveFreeEnergy(game)
     if(tile.flatPiece != null)
       tile.flatPiece.canReceiveFreeEnergyAtThisLocation = tile.flatPiece.canReceiveFreeEnergy(game)                    
   }
@@ -18,6 +18,7 @@ function tileIsInRangeOfFriendlyConduit(game, playerColor, tile)
   {
     var piece = possibleConduitTile.piece
     var flatPiece = possibleConduitTile.flatPiece
+
     if(piece != null && piece.types.includes("Conduit") && piece.owner == playerColor && getDistanceBetweenTwoTiles(possibleConduitTile, tile) <= piece.energyDistributionRange && piece.isActive)
       return true
     if(flatPiece != null && flatPiece.types.includes("Conduit") && flatPiece.owner == playerColor && getDistanceBetweenTwoTiles(possibleConduitTile, tile) <= flatPiece.energyDistributionRange && flatPiece.isActive)
@@ -415,16 +416,11 @@ function onlyUnique(value, index, self) {
     return self.indexOf(value) === index;
 }
 
-function removeValueFromArray(arr) 
+function removeValueFromList(list, valueToRemove) 
 {
-  var what, a = arguments, L = a.length, ax;
-  while (L > 1 && arr.length) 
-  {
-    what = a[--L];
-    while ((ax = arr.indexOf(what)) !== -1)
-        arr.splice(ax, 1);
-  }
-  return arr;
+  var index = list.indexOf(valueToRemove)
+  if (index > -1)
+    list.splice(index, 1)
 }
 
 module.exports = {
@@ -462,5 +458,5 @@ module.exports = {
   getTilesWithStatus,
   getAdjacentTiles,
   onlyUnique,
-  removeValueFromArray,
+  removeValueFromList,
 };

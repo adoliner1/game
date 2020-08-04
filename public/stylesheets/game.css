@@ -7,7 +7,7 @@ td:hover {background-color: #FFFFE0;}
 #board {position: absolute; left: 3%; top: 3%; height: 95%; width: 55%;}
 #board td {position: relative; border: 2px solid #606060;}
 
-#victoryPointTokenSupply {position: absolute; top: 47%; left: 100%; color: #33cc33; font-weight: bold;}
+#victoryPointTokenSupply {position: absolute; top: 40%; left: 65%; color: #33cc33; font-weight: bold;}
 
 .flatPiece {position: absolute; font-size: 15px; left: 27%; bottom: 5%; font-weight: 500; background-color: transparent;}
 .piece {position: absolute; font-size: 15px; left: 27%; top: 5%; font-weight: 500; background-color: transparent;}
@@ -21,7 +21,7 @@ td:hover {background-color: #FFFFE0;}
 .energy {position: absolute; left: 32%; top: 0%;}
 .vp {position: absolute; left: 60%; top: 0%;}
 
-#buttons {position: absolute; left: 65%; top: 40%; width: 15%; height: 10%; padding: 3px;}
+#buttons {position: absolute; left: 65%; top: 30%; width: 15%; height: 10%; padding: 3px;}
 #buttons button {position: relative; padding: 3px; border-radius: 10px; margin: 3px;}
 button:hover {background-color: #F0F8FF;}
 

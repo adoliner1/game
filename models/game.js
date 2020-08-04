@@ -9,7 +9,7 @@ function activateSocket(io)
   {
     socket.on('new socket connected to game', function(name)
     {
-      for (host in lobby.gameList)
+      for (var host in lobby.gameList)
       {
         if (lobby.gameList.hasOwnProperty(host) && (lobby.gameList[host].redPlayer.Name == name))
         {
@@ -24,6 +24,27 @@ function activateSocket(io)
           io.to(socket.id).emit('new game data', gameUtilities.convertServerGameToClientGame(lobby.gameList[host]))
         }
       }
+    })
+
+    socket.on('undo', function()
+    {
+      var game = gameUtilities.findGameFromSocketID(socket.id)
+
+      if (game == null)
+      {
+        io.to(socket.id).emit("new log message", "No such game")
+        return
+      }
+
+      if (game.previousGameState == undefined)
+      {
+        io.to(socket.id).emit("new log message", "Nothing to undo")
+        return
+      }
+
+      lobby.gameList[game.host] = game.previousGameState
+      io.to(game.host).emit("new log message", "Undo completed")
+      io.to(game.host).emit('new game state', gameUtilities.convertServerGameToClientGame(game.previousGameState))   
     })
 
     socket.on('request to cast a unit spell', function(casterTile, targetTile, targetID)
@@ -74,6 +95,7 @@ function activateSocket(io)
         return        
       }
 
+      game.previousGameState = _.cloneDeep(game)
       caster.castSpell(game, target)
 
       if (targetID == "Tile")
@@ -222,6 +244,7 @@ function activateSocket(io)
         return       
       }
 
+      game.previousGameState = _.cloneDeep(game)
       io.to(game.host).emit("new log message", player.Name + "'s " + attackerPiece.name + " attacks the " + victimPiece.name + " on col: " + gameVictimTile.col + " row: " + gameVictimTile.row)
 
       attackerPiece.attack(game, victimPiece)
@@ -346,6 +369,8 @@ function activateSocket(io)
         return        
       }
 
+      game.previousGameState = _.cloneDeep(game)
+
       if (gamePiece.isFlat)
         gameTileToBuildOn.flatPiece = gamePiece
       else
@@ -469,6 +494,7 @@ function activateSocket(io)
         return  
       }
 
+      game.previousGameState = _.cloneDeep(game)
       io.to(game.host).emit("new log message", player.Name + "'s " + movingPiece.name + " moves from col: " + fromTile.col + " row: " + fromTile.row + " to col: " + toTile.col + " row: " + toTile.row)
       movingPiece.move(game, moveableTilesAndThePathThere.get(toTile))
       io.to(game.host).emit('new game state', gameUtilities.convertServerGameToClientGame(game))
@@ -494,10 +520,24 @@ function activateSocket(io)
         return  
       }
 
+      if (!player.energy > 0)
+      {
+        io.to(socket.id).emit("new log message", "No energy")
+        return        
+      }      
+
       if (isFlatPiece)
         var piece = tileToEnergizePieceOnile.flatPiece
       else
         var piece = tileToEnergizePieceOnile.piece
+
+
+
+      if (!piece.canReceiveFreeEnergy(game))
+      {
+        io.to(socket.id).emit("new log message", "Can't receive energy there")
+        return        
+      }
 
       if (!gameUtilities.findIfAPlayerOwnsAPiece(isRedPlayer, piece))
       {
@@ -505,25 +545,15 @@ function activateSocket(io)
         return        
       }
 
-      //and piece can't store energy 
-      if (piece.isActive)
-      {
-        io.to(socket.id).emit("new log message", "Already active and can't store energy")
-        return       
-      }
-
-      if (piece.minimumEnergyNeededForActivation > player.energy)
-      {
-        io.to(socket.id).emit("new log message", "Not enough energy")
-        return             
-      }
+      game.previousGameState = _.cloneDeep(game)
 
       io.to(game.host).emit("new log message", player.Name + "'s " + piece.name + " on col: " + tileToEnergizePieceOnile.col + " row: " + tileToEnergizePieceOnile.row + " is energized")
 
-      player.energy -= piece.minimumEnergyNeededForActivation
+      console.log(piece)
+      piece.receiveEnergy(game, 1)
+      player.energy -= 1
 
-      piece.receiveEnergy(game, piece.minimumEnergyNeededForActivation)
-
+      console.log(game.board[2][4].piece)
       io.to(game.host).emit('new game state', gameUtilities.convertServerGameToClientGame(game))     
     })
 
@@ -546,6 +576,7 @@ function activateSocket(io)
         return  
       }
 
+      game.previousGameState = _.cloneDeep(game)
       for (var tile of game.getAllTilesInListForm())
       {
         var piece = tile.piece
@@ -607,7 +638,7 @@ function activateSocket(io)
       else
         io.to(game.host).emit("new log message", game.bluePlayer.Name + "'s turn")
 
-      io.to(game.host).emit('new game state', gameUtilities.convertServerGameToClientGame(game)) 
+      io.to(game.host).emit('new game state', gameUtilities.convertServerGameToClientGame(game))
     })
   })
 }

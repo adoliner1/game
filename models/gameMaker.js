@@ -182,7 +182,7 @@ function getRandomNumberBetweenMinAndMax(min, max)
 function selectRandomNonBaseSet(pieces)
 {
   var randomNonBaseSet = {}
-  addUniqueRandomPiecesFromSourceToDestination(pieces, randomNonBaseSet, 6)
+  addUniqueRandomPiecesFromSourceToDestination(pieces, randomNonBaseSet, 7)
   return randomNonBaseSet
 }
 

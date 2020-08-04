@@ -94,7 +94,7 @@ function findIfItsAPlayersTurnInGame(isRedPlayer, game){
 function findIfAPlayerOwnsAPiece(isRedPlayer, piece){
   return (piece.owner == 'Red' && isRedPlayer) || (piece.owner == 'Blue' && !isRedPlayer)
 }
-
+findGameFromSocketID
 function getDistanceBetweenTwoTiles(tile1, tile2)
 {
   return Math.abs(tile1.col - tile2.col) + Math.abs(tile1.row-tile2.row)
