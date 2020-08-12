@@ -75,7 +75,7 @@ class Piece
   getAttackableTiles(game)
   {
     var pieceTile = this.getCurrentTile(game)
-    var attackableTiles = utils.getTilesWithAPieceOrAFlatPiece(utils.getTilesWithinRangeOfTile(game.getAllTilesInListForm(), pieceTile, this.attackRange))
+    var attackableTiles = utils.getTilesWithAPieceOrAFlatPiece(utils.getTilesWithinRangeOfTile(game.boardAsList, pieceTile, this.attackRange))
     utils.removeValueFromList(attackableTiles, pieceTile) 
     return attackableTiles
   }
@@ -264,7 +264,7 @@ class Turret extends Piece
   getTilesThatUnitSpellCanBeCastOn(game)
   {
     var pieceTile = this.getCurrentTile(game)
-    return utils.getTilesWithAPieceOrAFlatPiece(utils.getTilesWithinRangeOfTile(game.getAllTilesInListForm(), pieceTile, this.castingRange))
+    return utils.getTilesWithAPieceOrAFlatPiece(utils.getTilesWithinRangeOfTile(game.boardAsList, pieceTile, this.castingRange))
   }
 
   castSpell(game, targetPiece)
@@ -296,7 +296,7 @@ class SpeedDome extends Piece
     if(this.isActive)
     {
       var isRedPlayer = this.owner == "Red" ? true : false       
-      tilesWithPieces = utils.getTilesWithAFriendlyPieceOrAFriendlyFlatPiece(isRedPlayer, utils.getTilesWithAPieceOrAFlatPiece(utils.getTilesWithinRangeOfTile(game.getAllTilesInListForm(), pieceTile, 4)))
+      tilesWithPieces = utils.getTilesWithAFriendlyPieceOrAFriendlyFlatPiece(isRedPlayer, utils.getTilesWithAPieceOrAFlatPiece(utils.getTilesWithinRangeOfTile(game.boardAsList, pieceTile, 4)))
       for (tile of tilesWithPieces)
         tile.piece.movement = tile.piece.movementCapacity
     }
@@ -320,7 +320,7 @@ class RepairShop extends Piece
     if (this.isActive)
     {
       var pieceTile = this.getCurrentTile(game)
-      var tilesWithPiecesInRange =  utils.getTilesWithAPieceOrAFlatPiece(utils.getTilesWithinRangeOfTile(game.getAllTilesInListForm(), pieceTile, 2))
+      var tilesWithPiecesInRange =  utils.getTilesWithAPieceOrAFlatPiece(utils.getTilesWithinRangeOfTile(game.boardAsList, pieceTile, 2))
       for (tile of tilesWithPiecesInRange)
       {
         if (tile.piece != null && tile.piece.owner == this.owner)
@@ -357,7 +357,7 @@ class FieldShocker extends Piece
   addReactionsWhenBuilt(game)
   {
     var pieceTile = this.getCurrentTile(game)
-    var tilesToReactTo = utils.getTilesWithinRangeOfTile(game.getAllTilesInListForm(), pieceTile, 3)
+    var tilesToReactTo = utils.getTilesWithinRangeOfTile(game.boardAsList, pieceTile, 3)
 
     for (var tile of tilesToReactTo)
     {
@@ -404,7 +404,7 @@ class SoulHarvester extends Piece
   addReactionsWhenBuilt(game)
   {
     var pieceTile = this.getCurrentTile(game)
-    var tilesToReactTo = utils.getTilesWithinRangeOfTile(game.getAllTilesInListForm(), pieceTile, 3)
+    var tilesToReactTo = utils.getTilesWithinRangeOfTile(game.boardAsList, pieceTile, 3)
 
     for (var tile of tilesToReactTo)
     {
@@ -600,7 +600,7 @@ class JuiceShaman extends Piece
   getTilesThatUnitSpellCanBeCastOn(game)
   {
     var pieceTile = this.getCurrentTile(game)
-    return utils.getTilesWithMoreThanZeroStrength(utils.getTilesWithAPieceOrAFlatPiece(utils.getTilesWithinRangeOfTile(game.getAllTilesInListForm(), pieceTile, this.castingRange)))
+    return utils.getTilesWithMoreThanZeroStrength(utils.getTilesWithAPieceOrAFlatPiece(utils.getTilesWithinRangeOfTile(game.boardAsList, pieceTile, this.castingRange)))
   }
 
   castSpell(game, targetPiece)
@@ -628,7 +628,7 @@ class DrainerWizard extends Piece
   getTilesThatUnitSpellCanBeCastOn(game)
   {
     var pieceTile = this.getCurrentTile(game)
-    return utils.getTilesWithAnActivePiece((utils.getTilesWithAPieceOrAFlatPiece(utils.getTilesWithinRangeOfTile(game.getAllTilesInListForm(), pieceTile, this.castingRange))))
+    return utils.getTilesWithAnActivePiece((utils.getTilesWithAPieceOrAFlatPiece(utils.getTilesWithinRangeOfTile(game.boardAsList, pieceTile, this.castingRange))))
   }
 
   castSpell(game, targetPiece)
@@ -666,7 +666,7 @@ class ElectricElephant extends Piece
   getTilesThatUnitSpellCanBeCastOn(game)
   {
     var pieceTile = this.getCurrentTile(game)
-    return (utils.getTilesWithAPieceOrAFlatPiece(utils.getTilesWithinRangeOfTile(game.getAllTilesInListForm(), pieceTile, this.castingRange)))
+    return (utils.getTilesWithAPieceOrAFlatPiece(utils.getTilesWithinRangeOfTile(game.boardAsList, pieceTile, this.castingRange)))
   }
 
   castSpell(game, targetPiece)
@@ -733,7 +733,7 @@ class Scrapper extends Piece
 {
   constructor()
   {
-    super("Scrapper", "When this piece damages a unit,  gain 1 gold. When it kills one, gain 3 gold", "SC", ["Unit"], 5, 3, 1, 1, 1, false, true)
+    super("Scrapper", "When this piece damages a unit, gain 1 gold. When it kills one, gain 3 gold", "SC", ["Unit"], 5, 3, 1, 1, 1, false, true)
   }
 
   attack(game, victim)
@@ -742,10 +742,10 @@ class Scrapper extends Piece
     this.isActive = false
     var victimOldHealth = victim.health
     victim.takeDamage(game, this, this.strength)
-    if (victimOldHealth < victim.health)
+    if (victim.health < victimOldHealth)
       player.gold += 1 
     if (victim == null || victim.health <= 0)
-      player.gold += 3
+      player.gold += 2
     if (victim.health > 0)
       victim.respondToAttack(game, this)
   }
@@ -754,7 +754,6 @@ class Scrapper extends Piece
 var scrapper = new Scrapper
 nonBaseSet[scrapper.name] = scrapper
 nonBaseSetUnits[scrapper.name] = scrapper
-
 
 //name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, health, attackRange, isFlat, canAttack)
 
@@ -942,7 +941,7 @@ class Techies extends Piece
     super.die(game, killer)
     var pieceTile = this.getCurrentTile(game)
 
-    for (var tile of utils.getTilesWithAPieceOrAFlatPiece(utils.getTilesWithinRangeOfTile(game.getAllTilesInListForm(), pieceTile, 1)))
+    for (var tile of utils.getTilesWithAPieceOrAFlatPiece(utils.getTilesWithinRangeOfTile(game.boardAsList, pieceTile, 1)))
       if (tile.piece != null)
         tile.piece.takeDamage(game, null, 5)
       if (tile.flatPiece != null)
@@ -1086,7 +1085,7 @@ class Witch extends Piece
   getTilesThatUnitSpellCanBeCastOn(game)
   {
     var pieceTile = this.getCurrentTile(game)    
-    return utils.getTilesWithoutAFlatPieceAndWithoutAPiece(utils.getTilesWithinRangeOfTile(game.getAllTilesInListForm(), pieceTile, 2))
+    return utils.getTilesWithoutAFlatPieceAndWithoutAPiece(utils.getTilesWithinRangeOfTile(game.boardAsList, pieceTile, 2))
   }
 
   castSpell(game, targetTile)
@@ -1111,9 +1110,15 @@ nonBaseSetUnits[witch.name] = witch
 
 class Headquarters extends Piece
 {
+  deactivate(game)
+  {
+    super.deactivate(game)
+    this.isActive = true
+  }
+
   constructor()
   {
-    super("Headquarters", "If this dies, the owner loses the game. Receive 2 energy and 5 gold at start of your turn.", "HQ", ["Building", "Conduit", "Builder"], 7, 0, 0, 10, 0, false, false)
+    super("Headquarters", "If this dies, the owner loses the game. Receive 2 energy and 5 gold at start of your turn. Remains active always.", "HQ", ["Building", "Conduit", "Builder"], 7, 0, 0, 10, 0, false, false)
     this.goldProduction = 5
     this.energyDistributionRange = 4
     this.castingRange = 4
@@ -1160,9 +1165,7 @@ class EnergyTower extends Piece
   {
     super.activate(game)
     if(this.isActive)
-    {
       utils.updatePiecesWhichCanReceiveFreeEnergy(game)
-    }
   }
 
   deactivate(game)
@@ -1415,7 +1418,7 @@ class EnergyAbsorber extends Piece
   addReactionsWhenBuilt(game)
   {
     var pieceTile = this.getCurrentTile(game)
-    var tilesToReactTo =  utils.getTilesWithAPieceOrAFlatPiece(utils.getTilesWithinRangeOfTile(game.getAllTilesInListForm(), pieceTile, 3))
+    var tilesToReactTo =  utils.getTilesWithAPieceOrAFlatPiece(utils.getTilesWithinRangeOfTile(game.boardAsList, pieceTile, 3))
 
     for (var tile of tilesToReactTo)
     {

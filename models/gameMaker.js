@@ -7,6 +7,7 @@ function createNewGame(name, host)
 {
 	//create board -- probably deserves its own helper -- or just a premade board to copy?
 	var board = new Array(constants.boardWidth);
+  var boardAsList = []
 	for (var col = 0; col < constants.boardWidth; col++)
 	{
 		board[col] = new Array(constants.boardLength);
@@ -14,6 +15,7 @@ function createNewGame(name, host)
 		{
 		  var tile = {piece: null, flatPiece: null, statuses: [], row: row, col: col, resource: ""}
 		  board[col][row] = tile
+      boardAsList.push(tile)
 		}
 	}
 
@@ -70,6 +72,7 @@ function createNewGame(name, host)
 		redPlayer: {socketID: null, turnsTaken: 0, Name: name, gold: 5, victoryPoints: 0, energy: 2},
 		bluePlayer: {socketID: null, turnsTaken: 0, Name: host, gold: 3, victoryPoints: 0, energy: 0},
 		board: board,
+    boardAsList: boardAsList,
 		movementReactions: new Map,
     activationReactions: new Map,
     deathReactions: new Map,
@@ -79,14 +82,7 @@ function createNewGame(name, host)
 		victoryPointTokenSupply: 100,
 		victoryPointTokenDrip: 1,
 		isRedPlayersTurn: true,
-
-		getAllTilesInListForm: function()
-		{
-		  var allTiles = []
-		  for (var col = 0; col < constants.boardWidth; col++)
-		    allTiles = allTiles.concat(board[col])
-		  return allTiles
-		}
+    previousGameState: null,
 	}
 
 	assignBonusesOfType(newGame, "G")
@@ -182,7 +178,7 @@ function getRandomNumberBetweenMinAndMax(min, max)
 function selectRandomNonBaseSet(pieces)
 {
   var randomNonBaseSet = {}
-  addUniqueRandomPiecesFromSourceToDestination(pieces, randomNonBaseSet, 7)
+  addUniqueRandomPiecesFromSourceToDestination(pieces, randomNonBaseSet, 10)
   return randomNonBaseSet
 }
 

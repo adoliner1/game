@@ -282,8 +282,8 @@ $(function ()
   			$('#endTurnButton').click()
   		else if(e.key == "c" && $('#castUnitSpellButton').is(":enabled"))
   			$('#castUnitSpellButton').click()
-
-
+   		else if(e.key == "n" && $('#energizeFlatPieceButton').is(":enabled"))
+  			$('#energizeFlatPieceButton').click()
 	});
 
 	//button handlers
@@ -596,7 +596,7 @@ function enableNecessaryActionButtons()
 		}
 
 		var playerEnergy = (window.isRedPlayer) ? (game.redPlayer.energy) : (game.bluePlayer.energy)
-		if (playerEnergy > 0 && currentlySelectedTile.piece.canReceiveFreeEnergyAtThisLocation)
+		if (playerEnergy > 0 && currentlySelectedTile.piece.canReceiveFreeEnergyAtThisLocation && (currentlySelectedTile.piece.isActive == false || currentlySelectedTile.piece.movement < currentlySelectedTile.piece.movementCapacity))
 		{
 			window.piecePotentiallyBeingEnergized = currentlySelectedTile.piece
 			enableAndShowButton($('#energizeButton'))
@@ -610,7 +610,7 @@ function enableNecessaryActionButtons()
 	}
 
 	var playerEnergy = (window.isRedPlayer) ? (game.redPlayer.energy) : (game.bluePlayer.energy)
-	if (currentlySelectedTile!= null && currentlySelectedTile.flatPiece != null && isThisPlayersTurn() && playerOwnsPiece(isRedPlayer, currentlySelectedTile.flatPiece) && !currentlySelectedTile.flatPiece.isActive && playerEnergy > 0 && currentlySelectedTile.flatPiece.canReceiveFreeEnergyAtThisLocation)
+	if (currentlySelectedTile!= null && currentlySelectedTile.flatPiece != null && isThisPlayersTurn() && playerOwnsPiece(isRedPlayer, currentlySelectedTile.flatPiece) && !currentlySelectedTile.flatPiece.isActive && playerEnergy > 0 && currentlySelectedTile.flatPiece.canReceiveFreeEnergyAtThisLocation && (currentlySelectedTile.piece.isActive == false || currentlySelectedTile.piece.movement < currentlySelectedTile.piece.movementCapacity))
 	{
 		window.flatPiecePotentiallyBeingEnergized = currentlySelectedTile.flatPiece
 		enableAndShowButton($('#energizeFlatPieceButton'))

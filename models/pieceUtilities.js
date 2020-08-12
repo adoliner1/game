@@ -3,10 +3,12 @@ var _ = require('lodash');
 
 function updatePiecesWhichCanReceiveFreeEnergy(game)
 {
-  for (var tile of game.getAllTilesInListForm())
+  for (var tile of game.boardAsList)
   {
     if(tile.piece != null)
+    {
       tile.piece.canReceiveFreeEnergyAtThisLocation = tile.piece.canReceiveFreeEnergy(game)
+    }
     if(tile.flatPiece != null)
       tile.flatPiece.canReceiveFreeEnergyAtThisLocation = tile.flatPiece.canReceiveFreeEnergy(game)                    
   }
@@ -14,7 +16,7 @@ function updatePiecesWhichCanReceiveFreeEnergy(game)
 
 function tileIsInRangeOfFriendlyConduit(game, playerColor, tile)
 {
-  for (var possibleConduitTile of game.getAllTilesInListForm())
+  for (var possibleConduitTile of game.boardAsList)
   {
     var piece = possibleConduitTile.piece
     var flatPiece = possibleConduitTile.flatPiece
@@ -30,10 +32,10 @@ function tileIsInRangeOfFriendlyConduit(game, playerColor, tile)
 function getTilesInRangeOfAFriendlyActiveCaster(game, playerColor)
 {
   var newTiles = []
-  var casterTiles = getTilesWithFriendlyActiveCasters(game.getAllTilesInListForm(), playerColor)
+  var casterTiles = getTilesWithFriendlyActiveCasters(game.boardAsList, playerColor)
   for (var casterTile of casterTiles)
   {
-    for (tile of getTilesWithinRangeOfTile(game.getAllTilesInListForm(), casterTile, casterTile.piece.castingRange))
+    for (tile of getTilesWithinRangeOfTile(game.boardAsList, casterTile, casterTile.piece.castingRange))
       newTiles.push(tile)
   }
   return newTiles
@@ -273,7 +275,7 @@ function playerOwnsPiece(isRedPlayer, piece)
 
 function getTilesNextToFriendlyActiveBuilders(game, isRedPlayer)
 {
-  var friendlyBuilderLocations = getTilesWithActiveFriendlyBuilders(game.getAllTilesInListForm(), isRedPlayer)
+  var friendlyBuilderLocations = getTilesWithActiveFriendlyBuilders(game.boardAsList, isRedPlayer)
   var newTiles = []
   for (tile of friendlyBuilderLocations)
   {

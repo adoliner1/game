@@ -4,7 +4,7 @@ var constants = require('../utilities/constants.js');
 
 function restoreMovementForPlayersPieces(game, isRedPlayer)
 {
-  for (tile of game.getAllTilesInListForm())
+  for (tile of game.boardAsList)
   {
     if(tile.piece != null && findIfAPlayerOwnsAPiece(isRedPlayer, tile.piece) && tile.piece.movementCapacity != 0)
       tile.piece.movement = tile.piece.movementCapacity
@@ -13,7 +13,7 @@ function restoreMovementForPlayersPieces(game, isRedPlayer)
 
 function updateCanReceiveFreeEnergies(game)
 {
-  for (var tile of game.getAllTilesInListForm())
+  for (var tile of game.boardAsList)
   {
     if(tile.piece != null)
       tile.piece.canReceiveFreeEnergyAtThisLocation = tile.piece.canReceiveFreeEnergy(game)          
@@ -94,7 +94,7 @@ function findIfItsAPlayersTurnInGame(isRedPlayer, game){
 function findIfAPlayerOwnsAPiece(isRedPlayer, piece){
   return (piece.owner == 'Red' && isRedPlayer) || (piece.owner == 'Blue' && !isRedPlayer)
 }
-findGameFromSocketID
+
 function getDistanceBetweenTwoTiles(tile1, tile2)
 {
   return Math.abs(tile1.col - tile2.col) + Math.abs(tile1.row-tile2.row)
