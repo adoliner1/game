@@ -6,9 +6,7 @@ function updatePiecesWhichCanReceiveFreeEnergy(game)
   for (var tile of game.boardAsList)
   {
     if(tile.piece != null)
-    {
       tile.piece.canReceiveFreeEnergyAtThisLocation = tile.piece.canReceiveFreeEnergy(game)
-    }
     if(tile.flatPiece != null)
       tile.flatPiece.canReceiveFreeEnergyAtThisLocation = tile.flatPiece.canReceiveFreeEnergy(game)                    
   }

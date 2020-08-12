@@ -104,7 +104,7 @@ function assignStartingBaseBonuses(game)
     var tile = game.board[randomCol][randomRow]
     var sisterTile = game.board[constants.boardWidth-randomCol-1][constants.boardLength-randomRow-1]
 
-    if (tile.statuses.length == 0 && tile.piece == null)
+    if (tile.statuses.length == 0 && tile.piece == null && tile.resource == null)
     {
       tile.resource = bonusToAdd
       sisterTile.resource = bonusToAdd
@@ -121,7 +121,7 @@ function assignStartingBaseBonuses(game)
     var tile = game.board[randomCol][randomRow]
     var sisterTile = game.board[constants.boardWidth-randomCol-1][constants.boardLength-randomRow-1]
 
-    if (tile.statuses.length == 0 && tile.piece == null)
+    if (tile.statuses.length == 0 && tile.piece == null && tile.resource == null)
     {
       tile.resource = bonusToAdd
       sisterTile.resource = bonusToAdd
@@ -178,7 +178,7 @@ function getRandomNumberBetweenMinAndMax(min, max)
 function selectRandomNonBaseSet(pieces)
 {
   var randomNonBaseSet = {}
-  addUniqueRandomPiecesFromSourceToDestination(pieces, randomNonBaseSet, 10)
+  addUniqueRandomPiecesFromSourceToDestination(pieces, randomNonBaseSet, 7)
   return randomNonBaseSet
 }
 
