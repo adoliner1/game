@@ -124,29 +124,59 @@ $(function ()
 
 		window.activeTiles = []
 		//set highlight and hover effect for each tile and the associated path and add the tiles to the active tiles
+
+		for (var tile of getTilesWithFriendlyActiveconduits())
+			tilesWhichAreHighlightedBecauseTheyCanBeEnergized = tilesWhichAreHighlightedBecauseTheyCanBeEnergized.concat(getTilesWhichCanBeEnergizedByConduit(tile, tile.piece.energyDistributionRange))
+
+		activeTiles = Array.from(tilesThatCanBeMovedToAndThePathsThere.keys())
+		window.tilesThatCanBeMovedToAndEnergized = activeTiles.filter(value => tilesWhichAreHighlightedBecauseTheyCanBeEnergized.includes(value))
+
 		for (var tile of tilesThatCanBeMovedToAndThePathsThere.keys())
 		{
 			activeTiles.push(tile)
+
+			if(!tilesThatCanBeMovedToAndEnergized.includes(tile))
+			{
+				var DOMObject = getDOMForTile(tile)
+				DOMObject.css('background-color', '#99e699')
+				DOMObject.hover
+				(
+					function()
+					{
+						hoverEffectForTileAndPath($(this), true)
+					},
+					function() 
+					{
+						hoverEffectForTileAndPath($(this), false)				
+					}
+				)
+			}
+		}
+
+		for (var tile of tilesThatCanBeMovedToAndEnergized)
+		{
 			var DOMObject = getDOMForTile(tile)
-			DOMObject.css('background-color', '#99e699')
+			DOMObject.css('background-color', '#00cc99')
 			DOMObject.hover
 			(
 				function()
 				{
-					hoverEffectForTileAndPath($(this), true)
+					hoverEffectForTileAndPathWhichCanBeEnergized($(this), true)
 				},
 				function() 
 				{
-					hoverEffectForTileAndPath($(this), false)				
+					hoverEffectForTileAndPathWhichCanBeEnergized($(this), false)				
 				}
 			)
 		}
+
 	})
 
 	socket.on('new active tiles', function(tiles)
 	{
 		activeTiles = getClientTilesFromServertiles(tiles)
 		highlightTilesGreenAndAddHover(activeTiles)
+
 		if (selectStorePieceToPurchaseMode)
 		{
 			buildMode = true
@@ -568,9 +598,30 @@ function hoverEffectForTileAndPath(tileJQueryObject, isHovering)
 	{
 		tileJQueryObject.css("background-color", "#99e699")					
 		for (pathTile of tilesThatCanBeMovedToAndThePathsThere.get(tile))
-			getDOMForTile(pathTile).css("background-color", "#99e699")
+			if (!tilesThatCanBeMovedToAndEnergized.includes(pathTile))
+				getDOMForTile(pathTile).css("background-color", "#99e699")
+			else
+				getDOMForTile(pathTile).css("background-color", "#00cc99")
 	}
+}
 
+function hoverEffectForTileAndPathWhichCanBeEnergized(tileJQueryObject, isHovering)
+{
+	var hoveredTileCol = tileJQueryObject[0].cellIndex
+	var hoveredTileRow = tileJQueryObject[0].parentNode.rowIndex
+	var tile = game.board[hoveredTileCol][hoveredTileRow]
+	if (isHovering)
+	{
+		tileJQueryObject.css("background-color", "#FFFFE0")					
+		for (pathTile of tilesThatCanBeMovedToAndThePathsThere.get(tile))
+			getDOMForTile(pathTile).css("background-color", "#FFFFE0")			
+	}
+	else
+	{
+		tileJQueryObject.css("background-color", "#00cc99")					
+		for (pathTile of tilesThatCanBeMovedToAndThePathsThere.get(tile))
+			getDOMForTile(pathTile).css("background-color", "#00cc99")
+	}
 }
 
 function enableNecessaryActionButtons()
@@ -697,7 +748,7 @@ function unhighlightBordersOfTile(tile)
 
 function highlightTilesBlueAndAddHover(tiles)
 {
-	for (tile of tiles)
+	for (var tile of tiles)
 	{
 		var DOMObject = getDOMForTile(tile)
 		DOMObject.css('background-color', '#80bfff')
@@ -726,6 +777,19 @@ function getTilesWhichCanBeEnergizedByConduit(conduitTile, energyDistributionRan
 	  if (getDistanceBetweenTwoTiles(tile, conduitTile) <= energyDistributionRange && getDistanceBetweenTwoTiles(tile, conduitTile) != 0)
 	    tilesThatCanBeEnergized.push(tile)
 	return tilesThatCanBeEnergized
+}
+
+function getTilesWithFriendlyActiveconduits()
+{
+	var friendlyActiveConduitTiles = []
+    for (var col = 0; col < boardWidth; col++)
+   		for (var row = 0; row < boardLength; row++)
+   		{
+   			var piece = game.board[col][row].piece
+   			if (piece != null && piece.types.includes('Conduit') && piece.isActive && playerOwnsPiece(window.isRedPlayer, piece))
+   				friendlyActiveConduitTiles.push(game.board[col][row])
+   		}
+   	return friendlyActiveConduitTiles
 }
 
 function getDistanceBetweenTwoTiles(tile1, tile2)

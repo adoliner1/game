@@ -13,7 +13,7 @@ function createNewGame(name, host)
 		board[col] = new Array(constants.boardLength);
 		for (var row = 0; row < constants.boardLength; row++) 
 		{
-		  var tile = {piece: null, flatPiece: null, statuses: [], row: row, col: col, resource: ""}
+		  var tile = {piece: null, flatPiece: null, statuses: [], row: row, col: col, resource: null}
 		  board[col][row] = tile
       boardAsList.push(tile)
 		}
@@ -97,14 +97,14 @@ function assignStartingBaseBonuses(game)
 {
   var bonusToAdd = "Gold: 1"
   var numberOfBonuses = 0
-  while (numberOfBonuses < 2)
+  while (numberOfBonuses < 1)
   {
     var randomCol = getRandomNumberBetweenMinAndMax(0, constants.boardWidth)
     var randomRow = getRandomNumberBetweenMinAndMax(0, 3)
     var tile = game.board[randomCol][randomRow]
     var sisterTile = game.board[constants.boardWidth-randomCol-1][constants.boardLength-randomRow-1]
 
-    if (tile.statuses.length == 0 && tile.piece == null && tile.resource == null)
+    if (tile.piece == null && tile.resource == null)
     {
       tile.resource = bonusToAdd
       sisterTile.resource = bonusToAdd
@@ -114,14 +114,14 @@ function assignStartingBaseBonuses(game)
 
   var bonusToAdd = "Energy: 1"
   var numberOfBonuses = 0
-  while (numberOfBonuses < 2)
+  while (numberOfBonuses < 1)
   {
     var randomCol = getRandomNumberBetweenMinAndMax(0, constants.boardWidth)
     var randomRow = getRandomNumberBetweenMinAndMax(0, 3)
     var tile = game.board[randomCol][randomRow]
     var sisterTile = game.board[constants.boardWidth-randomCol-1][constants.boardLength-randomRow-1]
 
-    if (tile.statuses.length == 0 && tile.piece == null && tile.resource == null)
+    if (tile.piece == null && tile.resource == null)
     {
       tile.resource = bonusToAdd
       sisterTile.resource = bonusToAdd
@@ -139,7 +139,7 @@ function assignBonusesOfType(game, bonusType)
     var randomRow = getRandomNumberBetweenMinAndMax(4, 8)
     var tile = game.board[randomCol][randomRow]
 
-    if (tile.statuses.length == 0)
+    if (tile.resource == null)
     {
       if (randomRow < 6)
       {
@@ -165,6 +165,9 @@ function assignBonusesOfType(game, bonusType)
       tile.resource = bonusToAdd
       sisterTile.resource = bonusToAdd
       numberOfBonuses ++
+
+      if(bonusType == "E" || "G")
+        return
     }
   }
 }

@@ -1598,7 +1598,7 @@ class LargeVictoryPointHarvester extends Piece
 {
   constructor()
   {
-    super("Large Victory Point Miner", "when activated, produces victory points equal to the VP resource bonus on this piece's tile*2", "LV", ["Building"], 10, 0, 0, 3, 0, false, false)
+    super("Large Victory Point Harvester", "when activated, produces victory points equal to the VP resource bonus on this piece's tile*2", "LV", ["Building"], 10, 0, 0, 3, 0, false, false)
   }
 
   activate(game)
