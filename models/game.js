@@ -607,6 +607,8 @@ function activateSocket(io)
         return
       }
 
+      game.victoryPointTokenSupply --
+
       //check for end of game through VP tokens
       if (game.victoryPointTokenSupply == 0)
       {

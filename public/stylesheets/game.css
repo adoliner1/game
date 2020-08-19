@@ -1,13 +1,19 @@
 * {margin: 0; padding: 0; box-sizing: border-box; background-color: #ffffff;}
 body {font: 13px Helvetica, Arial; height: 100%;}
 html {height: 100%;}
-td:hover {background-color: #FFFFE0;}
 
 #boardAndInventoriesAndNavBar {position: absolute; left: 0%; height: 100%; width: 80%;}
 #board {position: absolute; left: 3%; top: 3%; height: 95%; width: 55%;}
 #board td {position: relative; border: 2px solid #606060;}
+#board td:hover {border-color: #ffd133;}
+#board td.highlighted {border-color: #ffaa00}
+#board td.tile.active {background-color: #99e699}
+#board td.tile.canBeEnergized {background-color: #e6f0ff}
+#board td.tile.active.canBeEnergized {background-color: #00ffcc}
+#board td.tile.hoverEffectForMovementPath {border-color: #ffd133;}
 
 #victoryPointTokenSupply {position: absolute; top: 40%; left: 65%; color: #33cc33; font-weight: bold;}
+#showTilesWhichCanBeEnergized {position: absolute; top: 80%; left: 65%;}
 
 .flatPiece {position: absolute; font-size: 15px; left: 27%; bottom: 5%; font-weight: 500; background-color: transparent;}
 .piece {position: absolute; font-size: 15px; left: 27%; top: 5%; font-weight: 500; background-color: transparent;}
@@ -30,6 +36,8 @@ button:hover {background-color: #F0F8FF;}
 #nonBaseSetBuildings {left: 1%; color: brown;}
 #nonBaseSetUnits {left: 1%; color: purple;}
 #stores td {width: 40px; height: 40px; text-align: center; vertical-align: center; border: 2px solid #6e6e77;}
+#stores td:hover {border-color: #ffd133;}
+#stores td.highlighted {border-color: #ffaa00}
 
 #displayerAndShopAndButtonsAndLogSection {position: absolute; border: 1px solid #000000; height: 100%; width: 20%; left: 80%;}
 

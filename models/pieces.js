@@ -295,11 +295,13 @@ class SpeedDome extends Piece
     super.activate(game)
     if(this.isActive)
     {
-      var isRedPlayer = this.owner == "Red" ? true : false       
+      var isRedPlayer = this.owner == "Red" ? true : false
+      var pieceTile = this.getCurrentTile(game)
       tilesWithPieces = utils.getTilesWithAFriendlyPieceOrAFriendlyFlatPiece(isRedPlayer, utils.getTilesWithAPieceOrAFlatPiece(utils.getTilesWithinRangeOfTile(game.boardAsList, pieceTile, 4)))
-      for (tile of tilesWithPieces)
+      for (var tile of tilesWithPieces)
         tile.piece.movement = tile.piece.movementCapacity
     }
+    this.deactivate(game)
   }
 }
 
@@ -953,7 +955,6 @@ var techies = new Techies
 nonBaseSet[techies.name] = techies
 nonBaseSetUnits[techies.name] = techies
 
-
 //name, description, owner, boardAvatar, types, cost, energyCapacity, strength, movementCapacity, health, attackRange, isFlat, canAttack)
 class PowerPriest extends Piece
 {
@@ -1121,7 +1122,6 @@ class Headquarters extends Piece
     super("Headquarters", "If this dies, the owner loses the game. Receive 2 energy and 5 gold at start of your turn. Remains active always.", "HQ", ["Building", "Conduit", "Builder"], 7, 0, 0, 10, 0, false, false)
     this.goldProduction = 5
     this.energyDistributionRange = 4
-    this.castingRange = 4
   }
 
   buildableTiles(game, pieceToBuild)
@@ -1143,7 +1143,7 @@ class Headquarters extends Piece
       else
       {
         game.bluePlayer.energy += 2
-         game.bluePlayer.gold += 5
+        game.bluePlayer.gold += 5
       }
   }
 }

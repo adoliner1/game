@@ -16,6 +16,7 @@ $(function ()
 	//tiles which can currently be acted on(moved to, attacked, casted on, built on)
 	window.activeTiles = []
 	window.tilesWhichAreHighlightedBecauseTheyCanBeEnergized = []
+	window.showTilesWhichCanBeEnergized = true
 	window.tilesThatCanBeMovedToAndThePathsThere = new Map
 
 	//storage variables to pass data between click handlers
@@ -52,12 +53,10 @@ $(function ()
 		var oldTurn = isThisPlayersTurn()				
 		window.game = newGameState
 
-		console.log(window.game)
 		if(isThisPlayersTurn() && !oldTurn)
 			yourTurnSound.play()
 
 		enableAndDisableEndTurnButtonAsNeeded(game)
-
 		updatePlayerResourcesDOM(true, game.redPlayer)
 		updatePlayerResourcesDOM(false, game.bluePlayer)
 
@@ -123,59 +122,30 @@ $(function ()
 			tilesThatCanBeMovedToAndThePathsThere.set(game.board[tile.col][tile.row], getClientTilesFromServertiles(tilePathMap.get(tile)))
 
 		window.activeTiles = []
-		//set highlight and hover effect for each tile and the associated path and add the tiles to the active tiles
-
-		for (var tile of getTilesWithFriendlyActiveconduits())
-			tilesWhichAreHighlightedBecauseTheyCanBeEnergized = tilesWhichAreHighlightedBecauseTheyCanBeEnergized.concat(getTilesWhichCanBeEnergizedByConduit(tile, tile.piece.energyDistributionRange))
-
 		activeTiles = Array.from(tilesThatCanBeMovedToAndThePathsThere.keys())
-		window.tilesThatCanBeMovedToAndEnergized = activeTiles.filter(value => tilesWhichAreHighlightedBecauseTheyCanBeEnergized.includes(value))
+		addActiveClassToTiles(activeTiles)
 
-		for (var tile of tilesThatCanBeMovedToAndThePathsThere.keys())
-		{
-			activeTiles.push(tile)
-
-			if(!tilesThatCanBeMovedToAndEnergized.includes(tile))
-			{
-				var DOMObject = getDOMForTile(tile)
-				DOMObject.css('background-color', '#99e699')
-				DOMObject.hover
-				(
-					function()
-					{
-						hoverEffectForTileAndPath($(this), true)
-					},
-					function() 
-					{
-						hoverEffectForTileAndPath($(this), false)				
-					}
-				)
-			}
-		}
-
-		for (var tile of tilesThatCanBeMovedToAndEnergized)
+		for (var tile of activeTiles)
 		{
 			var DOMObject = getDOMForTile(tile)
-			DOMObject.css('background-color', '#00cc99')
 			DOMObject.hover
 			(
 				function()
 				{
-					hoverEffectForTileAndPathWhichCanBeEnergized($(this), true)
+					hoverEffectForMovementPath($(this), true)
 				},
 				function() 
 				{
-					hoverEffectForTileAndPathWhichCanBeEnergized($(this), false)				
+					hoverEffectForMovementPath($(this), false)				
 				}
 			)
 		}
-
 	})
 
 	socket.on('new active tiles', function(tiles)
 	{
 		activeTiles = getClientTilesFromServertiles(tiles)
-		highlightTilesGreenAndAddHover(activeTiles)
+		addActiveClassToTiles(activeTiles)
 
 		if (selectStorePieceToPurchaseMode)
 		{
@@ -191,13 +161,16 @@ $(function ()
 	{
 		$('#stores td').click(function storeTileClicked(e)
 		{
-			unhighlightBordersOfAllCurrentlyHighlightedDOMObjects()
-			disableAllButtons()
 			e.stopPropagation();
+			removeAllBorderHighlightsAndResetHover()
+			activeTiles = []
+			resetHoverForTiles(window.activeTiles)
+			disableAllButtons()
+
 			var parentShop = this.closest('table')
 			var index = this.cellIndex
 			window.currentlyClickedStoreTileDOM = $(this)
-			highlightBordersOfDOMObject(currentlyClickedStoreTileDOM)
+			addHighlightedClassToObject(currentlyClickedStoreTileDOM)
 
 			if (parentShop.id == 'baseSet')
 				var currentlySelectedStorePiece = game.baseSet[index]
@@ -219,15 +192,16 @@ $(function ()
 	//board click handler
 	$('#board td').click(function tileClicked(e)
 	{
-		unhighlightBordersOfAllCurrentlyHighlightedDOMObjects()
-		resetTilesColorsAndAddHover(tilesWhichAreHighlightedBecauseTheyCanBeEnergized)
+		removeAllBorderHighlightsAndResetHover()
 		disableAllButtons()
-		e.stopPropagation();
+		e.stopPropagation()
+
 		var clickedDOMTableElement = this
 		var xpos = clickedDOMTableElement.cellIndex
 		var ypos = clickedDOMTableElement.parentNode.rowIndex
 		currentlySelectedTile = game.board[xpos][ypos]
-		highlightBordersOfDOMObject(getDOMForTile(currentlySelectedTile))
+		updateDisplayerFromTile(currentlySelectedTile)
+		addHighlightedClassToObject(getDOMForTile(currentlySelectedTile))
 
 		if (activeTiles.includes(currentlySelectedTile))
 		{
@@ -271,32 +245,21 @@ $(function ()
 		}
 
 		enableNecessaryActionButtons()
-
-		if(currentlySelectedTile.piece != null && currentlySelectedTile.piece.types.includes("Conduit") && currentlySelectedTile.piece.isActive && playerOwnsPiece(isRedPlayer, currentlySelectedTile.piece))
-		{
-			tilesWhichAreHighlightedBecauseTheyCanBeEnergized = getTilesWhichCanBeEnergizedByConduit(currentlySelectedTile, currentlySelectedTile.piece.energyDistributionRange)
-			highlightTilesBlueAndAddHover(tilesWhichAreHighlightedBecauseTheyCanBeEnergized)
-		}
-
 		setAllModesToFalse()
-		resetTilesColorsAndAddHover(activeTiles)
 		activeTiles = []
-		updateDisplayerFromTile(currentlySelectedTile)
 	})
 
 	$(document).click(function() 
 	{
-		unhighlightBordersOfAllCurrentlyHighlightedDOMObjects()
+		removeAllBorderHighlightsAndResetHover()
     	$('.tabButton').removeClass('activeTab')
 		disableAllButtons()
-		resetTilesColorsAndAddHover(activeTiles)
-		resetTilesColorsAndAddHover(tilesWhichAreHighlightedBecauseTheyCanBeEnergized)
 		activeTiles = []
 		currentlySelectedTile = null
 		selectStorePieceToPurchaseMode = false
 		updateDisplayerFromTile(null)
 		updateDisplayerFromShop(null)
-	});
+	})
 
 	$(document).keypress(function(e) 
 	{
@@ -314,7 +277,7 @@ $(function ()
   			$('#castUnitSpellButton').click()
    		else if(e.key == "n" && $('#energizeFlatPieceButton').is(":enabled"))
   			$('#energizeFlatPieceButton').click()
-	});
+	})
 
 	//button handlers
 	$('#requestUndoButton').click(function(e)
@@ -352,7 +315,28 @@ $(function ()
 		e.stopPropagation()
 		socket.emit('request to end turn')
 	})
-	
+
+	$('#showTilesWhichCanBeEnergized').click(function(e)
+	{
+		clickSound.play()
+		e.preventDefault()
+		e.stopPropagation()
+		showTilesWhichCanBeEnergized = !showTilesWhichCanBeEnergized
+
+		var tilesWhichCanBeEnergized = []
+		if (showTilesWhichCanBeEnergized)
+		{
+			for (var tile of getTilesWithFriendlyActiveConduits())
+				tilesWhichCanBeEnergized = tilesWhichCanBeEnergized.concat(getTilesWhichCanBeEnergizedByConduitOnTile(tile, tile.piece.energyDistributionRange))
+			for (var tileWhichCanBeEnergized of tilesWhichCanBeEnergized)
+				getDOMForTile(tileWhichCanBeEnergized).addClass("canBeEnergized")
+		}
+		else
+			for (var col = 0; col < game.board.length; col++)
+				for (var row = 0; row < game.board[col].length; row++)
+					getDOMForTile(game.board[col][row]).removeClass("canBeEnergized")
+	})
+
 	$('#buildButton').click(function(e)
 	{
 		clickSound.play()
@@ -456,13 +440,14 @@ $(function ()
     	$('#tileProperties').show()
 		$('#displayTileTabButton').addClass('activeTab')
     })
-
 });
 
-function unhighlightBordersOfAllCurrentlyHighlightedDOMObjects()
+function removeAllBorderHighlightsAndResetHover()
 {
 	unhighlightAllStorePieces()
-	unhighlightBordersOfTile(window.currentlySelectedTile)
+	removeHighlightedClassFromTile(window.currentlySelectedTile)
+	removeActiveClassFromTiles(window.activeTiles)
+	resetHoverForTiles(window.activeTiles)
 }
 
 function getDOMForTile(tile)
@@ -502,16 +487,16 @@ function updatePlayerResourcesDOM(isRedPlayer, player)
 	}
 }
 
-function highlightBordersOfDOMObject(DOMObject)
+function addHighlightedClassToObject(DOMObject)
 {
 	if (DOMObject != null)
-		DOMObject.css("border", "2px solid #ffaa00")
+		DOMObject.addClass("highlighted")
 }
 
-function unhighlightBordersOfStoreDOMObject(storeDOMObject)
+function removeHighlightedClassFromDOMObject(storeDOMObject)
 {
 	if (storeDOMObject != null)
-		storeDOMObject.css("border", "2px solid #6e6e77")
+		storeDOMObject.removeClass("highlighted")
 }
 
 function updateDOMForBoard(board)
@@ -519,6 +504,19 @@ function updateDOMForBoard(board)
 	for (var col = 0; col < game.board.length; col++)
 		for (var row = 0; row < game.board[col].length; row++) 
 			updateDOMForTile(board[col][row])
+
+	var tilesWhichCanBeEnergized = []
+	if (showTilesWhichCanBeEnergized)
+	{
+		for (var tile of getTilesWithFriendlyActiveConduits())
+			tilesWhichCanBeEnergized = tilesWhichCanBeEnergized.concat(getTilesWhichCanBeEnergizedByConduitOnTile(tile, tile.piece.energyDistributionRange))
+		for (var tileWhichCanBeEnergized of tilesWhichCanBeEnergized)
+			getDOMForTile(tileWhichCanBeEnergized).addClass("canBeEnergized")
+	}
+	else
+		for (var col = 0; col < game.board.length; col++)
+			for (var row = 0; row < game.board[col].length; row++)
+				getDOMForTile(game.board[col][row]).removeClass("canBeEnergized")
 }	
 
 function updateDOMForTile(tile)
@@ -583,44 +581,45 @@ function assignPieceColor(owner, DOMObject)
 		DOMObject.css('color', 'grey')
 }		
 
-function hoverEffectForTileAndPath(tileJQueryObject, isHovering)
+function hoverEffectForMovementPath(tileJQueryObject, isHovering)
 {
 	var hoveredTileCol = tileJQueryObject[0].cellIndex
 	var hoveredTileRow = tileJQueryObject[0].parentNode.rowIndex
 	var tile = game.board[hoveredTileCol][hoveredTileRow]
 	if (isHovering)
 	{
-		tileJQueryObject.css("background-color", "#FFFFE0")					
-		for (pathTile of tilesThatCanBeMovedToAndThePathsThere.get(tile))
-			getDOMForTile(pathTile).css("background-color", "#FFFFE0")			
+		tileJQueryObject.css("border-color: #ffd133;")
+		for (var pathTile of tilesThatCanBeMovedToAndThePathsThere.get(tile))
+		{
+			getDOMForTile(pathTile).addClass("hoverEffectForMovementPath")
+		}
 	}
 	else
 	{
-		tileJQueryObject.css("background-color", "#99e699")					
-		for (pathTile of tilesThatCanBeMovedToAndThePathsThere.get(tile))
-			if (!tilesThatCanBeMovedToAndEnergized.includes(pathTile))
-				getDOMForTile(pathTile).css("background-color", "#99e699")
-			else
-				getDOMForTile(pathTile).css("background-color", "#00cc99")
+		for (var pathTile of tilesThatCanBeMovedToAndThePathsThere.get(tile))
+		{
+			getDOMForTile(pathTile).removeClass("hoverEffectForMovementPath")
+		}
 	}
 }
 
-function hoverEffectForTileAndPathWhichCanBeEnergized(tileJQueryObject, isHovering)
+function resetHoverForTiles(tiles)
 {
-	var hoveredTileCol = tileJQueryObject[0].cellIndex
-	var hoveredTileRow = tileJQueryObject[0].parentNode.rowIndex
-	var tile = game.board[hoveredTileCol][hoveredTileRow]
-	if (isHovering)
+	for (var tile of tiles)
 	{
-		tileJQueryObject.css("background-color", "#FFFFE0")					
-		for (pathTile of tilesThatCanBeMovedToAndThePathsThere.get(tile))
-			getDOMForTile(pathTile).css("background-color", "#FFFFE0")			
-	}
-	else
-	{
-		tileJQueryObject.css("background-color", "#00cc99")					
-		for (pathTile of tilesThatCanBeMovedToAndThePathsThere.get(tile))
-			getDOMForTile(pathTile).css("background-color", "#00cc99")
+		getDOMForTile(tile).removeClass('hoverEffectForMovementPath')
+		getDOMForTile(tile).unbind('mouseenter mouseleave')
+		getDOMForTile(tile).hover
+		(
+			function() 
+			{
+				$(this).css("border-color: #ffd133;")
+			},
+			function() 
+			{
+				$(this).css("border-color: #606060;")				
+			}
+		)
 	}
 }
 
@@ -665,7 +664,7 @@ function enableNecessaryActionButtons()
 	{
 		window.flatPiecePotentiallyBeingEnergized = currentlySelectedTile.flatPiece
 		enableAndShowButton($('#energizeFlatPieceButton'))
-	}	
+	}
 }
 
 function addResourcesToDisplay(board)
@@ -694,23 +693,20 @@ function addResourcesToDisplay(board)
 	}	
 }
 
-function highlightTilesGreenAndAddHover(tiles)
+function getTilesWhichCanBeEnergized()
+{
+	var tilesWhichCanBeEnergized = []
+	for (var tile of getTilesWithFriendlyActiveConduits())
+		tilesWhichCanBeEnergized = tilesWhichCanBeEnergized.concat(getTilesWhichCanBeEnergizedByConduitOnTile(tile, tile.piece.energyDistributionRange))
+	return tilesWhichCanBeEnergized
+}
+
+function addActiveClassToTiles(tiles)
 {
 	for (var tile of tiles)
 	{
 		var DOMObject = getDOMForTile(tile)
-		DOMObject.css('background-color', '#99e699')
-		DOMObject.hover
-		(
-			function()
-			{
-				$(this).css("background-color", "#FFFFE0")
-			},
-			function() 
-			{
-				$(this).css("background-color", "#99e699")
-			}
-		)
+		DOMObject.addClass("active")
 	}
 }
 
@@ -737,49 +733,34 @@ function highlightCenterTilesForHuts(tiles)
 	}
 }
 
-function unhighlightBordersOfTile(tile)
+function removeHighlightedClassFromTile(tile)
 {
 	if (tile != null)
 	{
 		var DOMObject = getDOMForTile(tile)
-		DOMObject.css("border", "2px solid #606060")
+		DOMObject.removeClass("highlighted")
 	}
 }
 
-function highlightTilesBlueAndAddHover(tiles)
-{
-	for (var tile of tiles)
-	{
-		var DOMObject = getDOMForTile(tile)
-		DOMObject.css('background-color', '#80bfff')
-		DOMObject.hover
-		(
-			function()
-			{
-				$(this).css("background-color", "#FFFFE0")
-			},
-			function() 
-			{
-				$(this).css("background-color", "#80bfff")
-			}
-		)
-	}
-}
-
-function getTilesWhichCanBeEnergizedByConduit(conduitTile, energyDistributionRange)
+function getTilesWhichCanBeEnergizedByConduitOnTile(conduitTile)
 {
 	var gameTiles = []
+	if (conduitTile.piece != null)	
+		var energyDistributionRange = conduitTile.piece.energyDistributionRange
+	else
+		var energyDistributionRange = conduitTile.flatPiece.energyDistributionRange
+
     for (var col = 0; col < boardWidth; col++)
         gameTiles = gameTiles.concat(game.board[col])
 
 	var tilesThatCanBeEnergized = []
-	for (tile of gameTiles)
+	for (var tile of gameTiles)
 	  if (getDistanceBetweenTwoTiles(tile, conduitTile) <= energyDistributionRange && getDistanceBetweenTwoTiles(tile, conduitTile) != 0)
 	    tilesThatCanBeEnergized.push(tile)
 	return tilesThatCanBeEnergized
 }
 
-function getTilesWithFriendlyActiveconduits()
+function getTilesWithFriendlyActiveConduits()
 {
 	var friendlyActiveConduitTiles = []
     for (var col = 0; col < boardWidth; col++)
@@ -802,25 +783,12 @@ function isAttackableTile(tile)
 	return (tile.piece != null || (tile.flatPiece != null))
 }
 
-function resetTilesColorsAndAddHover(tiles)
+function removeActiveClassFromTiles(tiles)
 {
-
 	for (var tile of tiles)
 	{
 		var DOMObject = getDOMForTile(tile)
-		DOMObject.css('background-color', '#ffffff')
-		DOMObject.off("mouseenter mouseleave")
-		DOMObject.hover
-		(
-			function() 
-			{
-  				$(this).css("background-color", "#FFFFE0")
-			},
-			function() 
-			{
-  				$(this).css("background-color", "#ffffff")
-			}
-		)
+		DOMObject.removeClass("active")
 	}
 }
 
@@ -898,17 +866,17 @@ function highlightShopPiecesWhichCanBeBought()
 	$('#baseSet > tbody > tr > td').each(function(index, tableRow) 
 	{
 		if(game.baseSet[index].cost <= playerGold)
-			highlightBordersOfDOMObject($(this))
+			addHighlightedClassToObject($(this))
 	});
 	$('#nonBaseSetBuildings > tbody > tr > td').each(function(index, tableRow) 
 	{
 		if(game.nonBaseSetBuildings[index].cost <= playerGold)
-			highlightBordersOfDOMObject($(this))
+			addHighlightedClassToObject($(this))
 	});
 	$('#nonBaseSetUnits > tbody > tr > td').each(function(index, tableRow) 
 	{
 		if(game.nonBaseSetUnits[index].cost <= playerGold)
-			highlightBordersOfDOMObject($(this))
+			addHighlightedClassToObject($(this))
 	});
 }
 
@@ -916,17 +884,17 @@ function unhighlightAllStorePieces()
 {
 	$('#baseSet > tbody > tr > td').each(function(index, tableRow) 
 	{
-		unhighlightBordersOfStoreDOMObject($(this))
+		removeHighlightedClassFromDOMObject($(this))
 	});
 
 	$('#nonBaseSetBuildings > tbody > tr > td').each(function(index, tableRow) 
 	{
-		unhighlightBordersOfStoreDOMObject($(this))
+		removeHighlightedClassFromDOMObject($(this))
 	});
 
 	$('#nonBaseSetUnits > tbody > tr > td').each(function(index, tableRow) 
 	{
-		unhighlightBordersOfStoreDOMObject($(this))
+		removeHighlightedClassFromDOMObject($(this))
 	});
 }
 
